@@ -1,0 +1,36 @@
+{
+  "name": "re7-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:db:push": "prisma db push --skip-generate",
+    "test:db:push": "dotenv -e env.test -- prisma db push --schema=prisma/schema.test.prisma --accept-data-loss",
+    "test:client:generate": "dotenv -e env.test -- prisma generate --schema=prisma/schema.test.prisma",
+    "test": "npm run test:db:push && npm run test:client:generate && vitest"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.19.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.2",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.5.4",
+    "@types/supertest": "^6.0.3",
+    "dotenv-cli": "^7.4.2",
+    "ganache": "^7.9.2",
+    "prisma": "^5.19.1",
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2",
+    "vitest": "^2.0.5"
+  }
+}

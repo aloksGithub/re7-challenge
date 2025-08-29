@@ -1,0 +1,43 @@
+// Start a local Ganache instance programmatically. If not available, skip and rely on env.
+let server: any | undefined;
+
+export default async function() {
+	if (process.env.FORK_RPC_URL) return () => {};
+
+	let Ganache: any;
+	try {
+		// Dynamic import so it is optional
+		// eslint-disable-next-line @typescript-eslint/no-var-requires
+		Ganache = (await import("ganache")).default ?? (await import("ganache"));
+	} catch {
+		return () => {};
+	}
+
+	const upstream = process.env.UPSTREAM_RPC_URL || process.env.MAINNET_RPC_URL || process.env.SEPOLIA_RPC_URL || process.env.POLYGON_RPC_URL;
+	const forkOpts = upstream ? { fork: { url: upstream } } : {};
+
+	server = Ganache.server({
+		logging: { quiet: true },
+		chain: { chainId: 11155111, networkId: 11155111 },
+		wallet: { deterministic: true },
+		...forkOpts,
+	});
+
+	await server.listen(8545);
+	process.env.FORK_RPC_URL = "http://127.0.0.1:8545";
+	process.env.SEPOLIA_RPC_URL = process.env.FORK_RPC_URL;
+
+	try {
+		const accounts = server.provider.getInitialAccounts?.();
+		const first = accounts ? Object.values(accounts)[0] as any : undefined;
+		if (first?.secretKey) {
+			process.env.PRIVATE_KEY = first.secretKey;
+		}
+	} catch {}
+
+	return async () => {
+		try { await server?.close(); } catch {}
+	};
+}
+
+

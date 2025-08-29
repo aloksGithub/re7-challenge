@@ -1,0 +1,47 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Transaction {
+  id            String   @id @default(cuid())
+  fromAddress   String
+  toAddress     String
+  tokenAddress  String
+  amount        Decimal
+  network       String
+  txHash        String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([fromAddress, network, createdAt])
+  @@index([toAddress, network, createdAt])
+  @@index([tokenAddress, network, createdAt])
+}
+
+model AddressBlacklist {
+  id        Int      @id @default(autoincrement())
+  address   String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+model SupportedToken {
+  id           Int      @id @default(autoincrement())
+  network      String
+  tokenAddress String
+  symbol       String
+  name         String
+  decimals     Int
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([network, tokenAddress])
+  @@index([network, symbol])
+}
+
