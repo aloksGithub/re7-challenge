@@ -13,19 +13,18 @@ export default async function() {
 		return () => {};
 	}
 
-	const upstream = process.env.UPSTREAM_RPC_URL || process.env.MAINNET_RPC_URL || process.env.SEPOLIA_RPC_URL || process.env.POLYGON_RPC_URL;
+	const upstream = process.env.UPSTREAM_RPC_URL || "https://ethereum.publicnode.com";
 	const forkOpts = upstream ? { fork: { url: upstream } } : {};
 
 	server = Ganache.server({
 		logging: { quiet: true },
-		chain: { chainId: 11155111, networkId: 11155111 },
+		chain: { chainId: 1337, networkId: 1337 },
 		wallet: { deterministic: true },
 		...forkOpts,
 	});
 
 	await server.listen(8545);
 	process.env.FORK_RPC_URL = "http://127.0.0.1:8545";
-	process.env.SEPOLIA_RPC_URL = process.env.FORK_RPC_URL;
 
 	try {
 		const accounts = server.provider.getInitialAccounts?.();

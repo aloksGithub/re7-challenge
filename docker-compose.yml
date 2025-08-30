@@ -26,7 +26,6 @@ services:
       PORT: 4000
       # Prefer local fork when available
       FORK_RPC_URL: http://fork:8545
-      SEPOLIA_RPC_URL: http://fork:8545
     depends_on:
       - db
       - fork

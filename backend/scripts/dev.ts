@@ -76,12 +76,12 @@ async function startFork(): Promise<{ url: string; close: () => Promise<void> }>
     throw new Error("Ganache is not installed. Add it to devDependencies to enable forked dev.");
   }
 
-  const upstream = process.env.UPSTREAM_RPC_URL || process.env.MAINNET_RPC_URL || process.env.SEPOLIA_RPC_URL || process.env.POLYGON_RPC_URL;
+  const upstream = process.env.UPSTREAM_RPC_URL || "https://ethereum.publicnode.com";
   const forkOpts = upstream ? { fork: { url: upstream } } : {};
 
   const server = Ganache.server({
     logging: { quiet: true },
-    chain: { chainId: 11155111, networkId: 11155111 },
+    chain: { chainId: 1337, networkId: 1337 },
     wallet: { deterministic: true },
     ...forkOpts,
   });
@@ -104,7 +104,6 @@ async function startFork(): Promise<{ url: string; close: () => Promise<void> }>
   } catch {}
 
   process.env.FORK_RPC_URL = url;
-  process.env.SEPOLIA_RPC_URL = url;
 
   return {
     url,
@@ -143,11 +142,11 @@ async function addSupportedToken(apiBaseUrl: string, network: string, token: { t
     const text = await res.text().catch(() => "");
     throw new Error(`Failed to add supported token (${res.status}): ${text}`);
   }
-  console.log({ network, token })
   return res.json();
 }
 
 async function deployAndRegisterTokens(apiBaseUrl: string) {
+  console.log("Setting up ERC20 tokens...")
   const rpc = process.env.FORK_RPC_URL || "http://127.0.0.1:8545";
   const provider = new JsonRpcProvider(rpc);
   const signer = await getSigner(provider);
@@ -180,7 +179,7 @@ async function deployAndRegisterTokens(apiBaseUrl: string) {
   });
 
   for (const d of deployed) {
-    await addSupportedToken(apiBaseUrl, "sepolia", {
+    await addSupportedToken(apiBaseUrl, "localhost", {
       tokenAddress: d.address,
       symbol: d.symbol,
       name: d.name,
