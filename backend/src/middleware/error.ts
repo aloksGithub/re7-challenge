@@ -34,6 +34,8 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
   if (code) payload.code = code;
   if (details) payload.details = details;
 
+  console.log(err)
+
   if (process.env.NODE_ENV !== "production" && !(isHttp && err.details)) {
     // include stack for debugging in non-prod
     payload.stack = (err as any)?.stack;

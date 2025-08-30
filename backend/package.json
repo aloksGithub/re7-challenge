@@ -11,7 +11,7 @@
     "prisma:db:push": "prisma db push --skip-generate",
     "test:db:push": "dotenv -e env.test -- prisma db push --schema=prisma/schema.test.prisma --accept-data-loss",
     "test:client:generate": "dotenv -e env.test -- prisma generate --schema=prisma/schema.test.prisma",
-    "test": "npm run test:db:push && npm run test:client:generate && vitest"
+    "test": "node ./scripts/test-with-sqlite.js"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",
@@ -27,6 +27,7 @@
     "@types/supertest": "^6.0.3",
     "dotenv-cli": "^7.4.2",
     "ganache": "^7.9.2",
+    "solc": "^0.8.26-fixed",
     "prisma": "^5.19.1",
     "supertest": "^7.0.0",
     "tsx": "^4.19.1",

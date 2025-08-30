@@ -29,9 +29,20 @@ export default async function() {
 
 	try {
 		const accounts = server.provider.getInitialAccounts?.();
-		const first = accounts ? Object.values(accounts)[0] as any : undefined;
-		if (first?.secretKey) {
-			process.env.PRIVATE_KEY = first.secretKey;
+		const first = accounts ? (Object.values(accounts)[0] as any) : undefined;
+		const key = first?.secretKey ?? first?.privateKey;
+		if (key) {
+			let hexKey: string | undefined;
+			if (typeof key === "string") {
+				hexKey = key.startsWith("0x") ? key : ("0x" + key);
+			} else if (Buffer.isBuffer(key)) {
+				hexKey = "0x" + (key as Buffer).toString("hex");
+			} else if (key?.type === "Buffer" && Array.isArray(key?.data)) {
+				hexKey = "0x" + Buffer.from(key.data).toString("hex");
+			}
+			if (hexKey) {
+				process.env.PRIVATE_KEY = hexKey;
+			}
 		}
 	} catch {}
 
