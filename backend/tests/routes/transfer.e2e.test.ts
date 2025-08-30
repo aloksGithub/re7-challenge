@@ -4,11 +4,6 @@ import app from "../../src/app.js";
 import { JsonRpcProvider, Wallet, ContractFactory, parseUnits } from "ethers";
 import { compileToken } from "../../scripts/compileToken.js";
 
-// Runs when fork is available (either provided by env or started by globalSetup)
-const hasFork = !!process.env.FORK_RPC_URL;
-
-const maybe = hasFork ? describe : describe.skip;
-
 async function deployToken(name: string, symbol: string) {
 	const { abi, bytecode } = await compileToken(name, symbol);
 
@@ -27,7 +22,7 @@ async function deployToken(name: string, symbol: string) {
 	return {tokenAddress, token}
 }
 
-maybe("POST /transfer (e2e fork)", () => {
+describe("POST /transfer (e2e fork)", () => {
 	beforeAll(async () => {
 		const {tokenAddress, token} = await deployToken("TEST", "TST");
 

@@ -3,6 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import dotenv from "dotenv";
+import { ensurePrismaProvider, restorePrismaSchemaIfChanged, resolveSqliteFileFromEnvValue } from "./prisma-schema.js";
+import { createFork } from "./create-fork.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,31 +30,14 @@ function run(command: string, args: string[]) {
   });
 }
 
-function resolveSqliteFileFromEnvValue(value?: string) {
-  if (!value || typeof value !== "string") return undefined;
-  if (!value.startsWith("file:")) return undefined;
-  const withoutScheme = value.slice(5);
-  const filePart = withoutScheme.split("?")[0];
-  const normalized = filePart.replace(/^\/*/, "");
-  return path.isAbsolute(filePart) ? filePart : path.resolve(backendDir, normalized);
-}
-
 async function main() {
-  const original = await fs.readFile(schemaPath, "utf8");
-  const alreadySqlite = original.includes('provider = "sqlite"');
-
-  if (!alreadySqlite) {
-    const swapped = original.replace('provider = "postgresql"', 'provider = "sqlite"');
-    if (swapped === original) {
-      throw new Error("Could not find provider = \"postgresql\" in prisma/schema.prisma");
-    }
-    await fs.writeFile(schemaPath, swapped, "utf8");
-  }
+  const { changed, original } = await ensurePrismaProvider("sqlite");
 
   try {
     await run("npx", ["prisma", "db", "push", "--skip-generate", "--accept-data-loss"]);
     await run("npx", ["prisma", "generate"]);
     await run("npx", ["prisma", "generate", "--schema=prisma/schema.prisma"]);
+    await createFork();
     await run("npx", ["vitest", "run"]);
   } finally {
     const candidates = new Set<string>();
@@ -63,8 +48,8 @@ async function main() {
 
     await Promise.all(Array.from(candidates).map((p) => fs.rm(p, { force: true }).catch(() => {})));
 
-    if (!alreadySqlite) {
-      await fs.writeFile(schemaPath, original, "utf8");
+    if (changed) {
+      await restorePrismaSchemaIfChanged(changed, original);
       try {
         await run("npx", ["prisma", "generate"]);
       } catch (e: any) {

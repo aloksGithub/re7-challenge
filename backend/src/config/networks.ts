@@ -30,7 +30,7 @@ export const NETWORKS: Record<NetworkName, NetworkConfig> = {
 };
 
 const isProd = () => {
-  const stage = process.env.STAGE;
+  const stage = process.env.NODE_ENV;
   return stage === "prod" || stage === "production";
 }
 

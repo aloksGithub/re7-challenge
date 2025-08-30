@@ -1,17 +1,12 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
-import dotenv from "dotenv";
+import { ensurePrismaProvider, restorePrismaSchemaIfChanged } from "./prisma-schema.js";
 import { createFork } from "./create-fork.js";
-import { ensurePrismaProvider, restorePrismaSchemaIfChanged, resolveSqliteFileFromEnvValue } from "./prisma-schema.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const backendDir = path.resolve(__dirname, "..");
-const prismaDir = path.join(backendDir, "prisma");
-
-dotenv.config();
 
 function run(command: string, args: string[], extraEnv: NodeJS.ProcessEnv = {}) {
   return new Promise<number>((resolve, reject) => {
@@ -28,31 +23,53 @@ function run(command: string, args: string[], extraEnv: NodeJS.ProcessEnv = {}) 
   });
 }
 
+async function waitForRpcReady(url: string, timeoutSeconds = 60) {
+  for (let i = 0; i < timeoutSeconds; i++) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_chainId", params: [] }),
+      });
+      if (res.ok) return;
+    } catch {}
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  throw new Error("RPC not ready after waiting");
+}
+
 async function main() {
-  // Force development defaults
-  process.env.NODE_ENV = process.env.NODE_ENV || "development";
-  // Use a local sqlite database for dev
-  process.env.DATABASE_URL = process.env.DATABASE_URL || "file:./dev.db?connection_limit=1";
+  process.env.NODE_ENV = process.env.NODE_ENV || "production";
 
-  const sqliteDbCandidates = new Set<string>();
-  const resolvedDbFile = resolveSqliteFileFromEnvValue(process.env.DATABASE_URL);
-  if (resolvedDbFile) sqliteDbCandidates.add(resolvedDbFile);
-  sqliteDbCandidates.add(path.join(backendDir, "dev.db"));
-  sqliteDbCandidates.add(path.join(prismaDir, "dev.db"));
-
-  const { changed, original } = await ensurePrismaProvider("sqlite");
+  // Ensure we use PostgreSQL in Docker
+  const { changed, original } = await ensurePrismaProvider("postgresql");
 
   let fork: Awaited<ReturnType<typeof createFork>> | undefined;
   try {
-    // Prepare DB and client
+    // Prepare DB and client for PostgreSQL
     await run("npx", ["prisma", "db", "push", "--skip-generate", "--accept-data-loss"]);
     await run("npx", ["prisma", "generate"]);
 
-    // Start local fork and seed supported tokens
-    fork = await createFork();
+    const shouldSeed = String(process.env.AUTO_SEED_ON_START ?? "true").toLowerCase() !== "false";
 
-    // Start the dev server (tsx watch)
-    const child = spawn("npx", ["tsx", "watch", "src/index.ts"], {
+    if (shouldSeed) {
+      try {
+        fork = await createFork();
+      } catch (e) {
+        console.error("Failed to create fork", e);
+      }
+
+      if (fork?.url) {
+        try {
+          await waitForRpcReady(fork.url);
+        } catch (e) {
+          console.error("Failed to wait for RPC ready", e);
+        }
+      }
+    }
+
+    // Start the server
+    const server = spawn("node", ["dist/index.js"], {
       stdio: "inherit",
       cwd: backendDir,
       env: { ...process.env },
@@ -60,12 +77,9 @@ async function main() {
     });
 
     const stop = async (code?: number) => {
-      try { child.kill(); } catch {}
+      try { server.kill(); } catch {}
       await fork?.close().catch(() => {});
-      // Cleanup sqlite files
-      await Promise.all(Array.from(sqliteDbCandidates).map((p) => fs.rm(p, { force: true }).catch(() => {})));
       await restorePrismaSchemaIfChanged(changed, original);
-      try { await run("npx", ["prisma", "generate"]); } catch {}
       process.exit(code ?? 0);
     };
 
@@ -76,9 +90,18 @@ async function main() {
       await stop(1);
     });
 
-    child.on("close", async (code) => {
+    server.on("close", async (code) => {
       await stop(code ?? 0);
     });
+
+    // Kick off seeding after server is up
+    if (shouldSeed) {
+      try {
+        await run("npm", ["run", "seed"]);
+      } catch (e) {
+        console.error("Seed failed, continuing startup.", e);
+      }
+    }
   } catch (err) {
     console.error(err);
     await fork?.close().catch(() => {});
