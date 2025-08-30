@@ -1,5 +1,4 @@
 import prisma from "../db.js";
-import { PrismaClient as TestPrismaClient } from "../../prisma/generated/test-client/index.js";
 import {
   addSupportedTokensForNetwork,
   addTransaction,
@@ -13,14 +12,6 @@ describe("dbService CRUD", () => {
   const network = "testnet";
 
   beforeAll(async () => {
-    // Replace prisma instance with test client bound to SQLite
-    const testClient = new TestPrismaClient();
-    // @ts-ignore override for tests
-    prisma.$disconnect();
-    // @ts-ignore override global prisma instance
-    (global as any).prismaGlobal = testClient;
-    // @ts-ignore rebind import
-    (prisma as any) = testClient;
     // Ensure clean tables for test run
     await prisma.transaction.deleteMany({});
     await prisma.addressBlacklist.deleteMany({});

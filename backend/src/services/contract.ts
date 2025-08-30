@@ -32,6 +32,15 @@ function getWalletFromEnv(network: string) {
   return signer as any;
 }
 
+export function getAddressFromEnv() {
+  const pk = process.env.PRIVATE_KEY;
+  if (!pk) {
+    throw new Error("PRIVATE_KEY is required to get address");
+  }
+  const signer = new Wallet(pk);
+  return signer.address;
+}
+
 export async function transferErc20(params: TransferParams) {
   const { network, tokenAddress, to, amount, decimals, waitForReceipt } = params;
   const signer = getWalletFromEnv(network);

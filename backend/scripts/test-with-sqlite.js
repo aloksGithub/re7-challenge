@@ -28,6 +28,15 @@ function run(command, args) {
   });
 }
 
+function resolveSqliteFileFromEnvValue(value) {
+  if (!value || typeof value !== "string") return undefined;
+  if (!value.startsWith("file:")) return undefined;
+  const withoutScheme = value.slice(5);
+  const filePart = withoutScheme.split("?")[0];
+  const normalized = filePart.replace(/^\/*/, "");
+  return path.isAbsolute(filePart) ? filePart : path.resolve(backendDir, normalized);
+}
+
 async function main() {
   const original = await fs.readFile(schemaPath, "utf8");
   const alreadySqlite = original.includes('provider = "sqlite"');
@@ -50,6 +59,17 @@ async function main() {
     // Run tests
     await run("npx", ["vitest", "run"]);
   } finally {
+    // Attempt to delete SQLite DB files created for tests
+    const candidates = new Set();
+    const databaseUrl = resolveSqliteFileFromEnvValue(process.env.DATABASE_URL);
+    if (databaseUrl) candidates.add(databaseUrl);
+    candidates.add(path.join(backendDir, "test.db"));
+    candidates.add(path.join(prismaDir, "test.db"));
+
+    await Promise.all(
+      Array.from(candidates).map((p) => fs.rm(p, { force: true }).catch(() => {}))
+    );
+
     // Restore original schema and regenerate default client
     if (!alreadySqlite) {
       await fs.writeFile(schemaPath, original, "utf8");
