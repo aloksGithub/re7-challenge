@@ -15,7 +15,7 @@ router.get("/tokens/:address", asyncHandler(async (req: Request, res: Response) 
 }));
 
 // Supported tokens for a network (DB-managed)
-router.get("/tokens/:network", asyncHandler(async (req: Request, res: Response) => {
+router.get("/supported-tokens/:network", asyncHandler(async (req: Request, res: Response) => {
   const { network } = req.params;
   assertSupportedNetwork(network);
   const tokens = await getSupportedTokensForNetwork(network);
