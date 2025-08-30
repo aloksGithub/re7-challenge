@@ -44,18 +44,14 @@ async function upsertSupportedToken(
 }
 
 export async function main() {
-  const rpc = process.env.FORK_RPC_URL;
-  if (!rpc) {
-    console.log("No RPC found; skipping seed");
-    return;
-  }
+  const rpc = "http://127.0.0.1:8545";
   const provider = new JsonRpcProvider(rpc);
   const signer = await getSigner(provider);
   const sender = await (signer as any).getAddress?.();
 
   const prisma = new PrismaClient();
   try {
-    await waitForDb(prisma);
+    // await waitForDb(prisma);
 
     const tokens = [1, 2, 3, 4, 5].map((i) => ({
       name: `Test Token ${i}`,
