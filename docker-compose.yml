@@ -27,7 +27,6 @@ services:
       # Prefer local fork when available
       FORK_RPC_URL: http://fork:8545
       SEPOLIA_RPC_URL: http://fork:8545
-      RPC_URL: ${RPC_URL:-}
     depends_on:
       - db
       - fork

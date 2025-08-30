@@ -44,7 +44,7 @@ async function upsertSupportedToken(
 }
 
 export async function main() {
-  const rpc = process.env.FORK_RPC_URL || process.env.SEPOLIA_RPC_URL || process.env.RPC_URL;
+  const rpc = process.env.FORK_RPC_URL;
   if (!rpc) {
     console.log("No RPC found; skipping seed");
     return;
