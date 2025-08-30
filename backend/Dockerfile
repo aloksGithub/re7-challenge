@@ -11,7 +11,9 @@ COPY prisma ./prisma
 RUN npx prisma generate
 COPY tsconfig.json ./tsconfig.json
 COPY src ./src
+COPY scripts ./scripts
 RUN npm run build
+RUN npx tsc --project tsconfig.json --outDir dist
 
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -20,5 +22,9 @@ COPY package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 RUN npm prune --omit=dev
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/scripts ./scripts
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 EXPOSE 4000
-CMD ["node", "dist/index.js"]
+ENTRYPOINT ["./docker-entrypoint.sh"]

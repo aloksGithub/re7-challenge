@@ -13,8 +13,8 @@ const envTestPath = path.join(backendDir, "env.test");
 
 dotenv.config({ path: envTestPath });
 
-function run(command, args) {
-  return new Promise((resolve, reject) => {
+function run(command: string, args: string[]) {
+  return new Promise<number>((resolve, reject) => {
     const child = spawn(command, args, {
       stdio: "inherit",
       cwd: backendDir,
@@ -28,7 +28,7 @@ function run(command, args) {
   });
 }
 
-function resolveSqliteFileFromEnvValue(value) {
+function resolveSqliteFileFromEnvValue(value?: string) {
   if (!value || typeof value !== "string") return undefined;
   if (!value.startsWith("file:")) return undefined;
   const withoutScheme = value.slice(5);
@@ -50,32 +50,24 @@ async function main() {
   }
 
   try {
-    // Prepare SQLite schema and clients
     await run("npx", ["prisma", "db", "push", "--skip-generate", "--accept-data-loss"]);
     await run("npx", ["prisma", "generate"]);
-    // Ensure tests that import the generated test client continue to work
     await run("npx", ["prisma", "generate", "--schema=prisma/schema.prisma"]);
-
-    // Run tests
     await run("npx", ["vitest", "run"]);
   } finally {
-    // Attempt to delete SQLite DB files created for tests
-    const candidates = new Set();
+    const candidates = new Set<string>();
     const databaseUrl = resolveSqliteFileFromEnvValue(process.env.DATABASE_URL);
     if (databaseUrl) candidates.add(databaseUrl);
     candidates.add(path.join(backendDir, "test.db"));
     candidates.add(path.join(prismaDir, "test.db"));
 
-    await Promise.all(
-      Array.from(candidates).map((p) => fs.rm(p, { force: true }).catch(() => {}))
-    );
+    await Promise.all(Array.from(candidates).map((p) => fs.rm(p, { force: true }).catch(() => {})));
 
-    // Restore original schema and regenerate default client
     if (!alreadySqlite) {
       await fs.writeFile(schemaPath, original, "utf8");
       try {
         await run("npx", ["prisma", "generate"]);
-      } catch (e) {
+      } catch (e: any) {
         console.error("Warning: prisma generate after restore failed:", e?.message ?? e);
       }
     }

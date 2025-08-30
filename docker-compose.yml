@@ -1,5 +1,11 @@
 version: "3.9"
 services:
+  fork:
+    image: trufflesuite/ganache:latest
+    command: ["--wallet.deterministic", "--chain.chainId=11155111", "--chain.networkId=11155111"]
+    ports:
+      - "8545:8545"
+
   db:
     image: postgres:16-alpine
     environment:
@@ -18,9 +24,13 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/re7?schema=public
       NODE_ENV: production
       PORT: 4000
+      # Prefer local fork when available
+      FORK_RPC_URL: http://fork:8545
+      SEPOLIA_RPC_URL: http://fork:8545
       RPC_URL: ${RPC_URL:-}
     depends_on:
       - db
+      - fork
     ports:
       - "4000:4000"
 

@@ -11,14 +11,16 @@
     "prisma:db:push": "prisma db push --skip-generate",
     "test:db:push": "dotenv -e env.test -- prisma db push --schema=prisma/schema.test.prisma --accept-data-loss",
     "test:client:generate": "dotenv -e env.test -- prisma generate --schema=prisma/schema.test.prisma",
-    "test": "node ./scripts/test-with-sqlite.js"
+    "test": "tsx scripts/test-with-sqlite.ts",
+    "seed:fork": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "ethers": "^6.13.2",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "solc": "^0.8.26-fixed"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
@@ -27,7 +29,6 @@
     "@types/supertest": "^6.0.3",
     "dotenv-cli": "^7.4.2",
     "ganache": "^7.9.2",
-    "solc": "^0.8.26-fixed",
     "prisma": "^5.19.1",
     "supertest": "^7.0.0",
     "tsx": "^4.19.1",
