@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RE7 Frontend (Next.js + React Query)
 
-## Getting Started
+Simple UI for viewing balances, sending ERC‑20 transfers, and browsing transaction history. Talks to the backend API.
 
-First, run the development server:
+## Requirements
+
+- Node 20+
+- npm 10+
+
+## Configuration
+
+- `NEXT_PUBLIC_API_BASE_URL` (default `http://localhost:4000`) — backend API base URL.
+
+Set in your shell or an `.env.local` file:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+NEXT_PUBLIC_API_BASE_URL=http://localhost:4000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Development
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cd frontend
+npm install
+npm run dev
+# App on http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Build and start (production)
 
-## Learn More
+```bash
+npm run build
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `npm run dev`: Next dev server (Turbopack)
+- `npm run build`: Production build
+- `npm start`: Start production server
+- `npm run lint`: Run ESLint
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Features
 
-## Deploy on Vercel
+- Network selector populated from `GET /networks`
+- Shows aggregated balances from `GET /tokens/:address` (filtered by selected network)
+- Token page with:
+  - Transfer tab (`POST /transfer`)
+  - History tab (`GET /transactions/:address/:token`)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/app` — App Router pages
+- `src/components` — UI components
+- `src/context/NetworkContext.tsx` — network selection state
+- `src/hooks/useBackend.ts` — React Query hooks
+- `src/lib/api.ts` — API client
+- `src/lib/config.ts` — API base URL configuration
+- `src/lib/types.ts` — shared types
