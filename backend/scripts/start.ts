@@ -85,12 +85,11 @@ function shouldUseWatch(): boolean {
   return (process.env.NODE_ENV || "development") !== "production";
 }
 
-async function main() {
-  // Determine runtime behaviour from env
+function initializeEnvironment() {
+  // Determine runtime behaviour from env and validate production requirements
   process.env.NODE_ENV = process.env.NODE_ENV || "development";
 
-  // Check for missing environment variables
-  if (process.env.NODE_ENV === 'prod' || process.env.NODE_ENV==='production') {
+  if (process.env.NODE_ENV === 'prod' || process.env.NODE_ENV === 'production') {
     if (!process.env.API_KEY) {
       console.error("API_KEY is not set in production");
       process.exit(1);
@@ -105,14 +104,16 @@ async function main() {
     }
   }
   process.env.API_KEY = process.env.API_KEY || "dev-key";
+}
 
-  const provider = determineProvider();
-
+function applyDefaultSqliteDbUrl(provider: "sqlite" | "postgresql") {
   // Default to local sqlite db for dev if not provided
   if (provider === "sqlite" && !process.env.DATABASE_URL) {
     process.env.DATABASE_URL = "file:./dev.db?connection_limit=1";
   }
+}
 
+function collectSqliteDbCandidates(provider: "sqlite" | "postgresql") {
   const sqliteDbCandidates = new Set<string>();
   const resolvedDbFile = resolveSqliteFileFromEnvValue(process.env.DATABASE_URL);
   if (provider === "sqlite") {
@@ -120,6 +121,134 @@ async function main() {
     sqliteDbCandidates.add(path.join(backendDir, "dev.db"));
     sqliteDbCandidates.add(path.join(prismaDir, "dev.db"));
   }
+  return sqliteDbCandidates;
+}
+
+async function prepareDatabase(provider: "sqlite" | "postgresql") {
+  const attempts = provider === "postgresql" ? Number(process.env.DB_PUSH_RETRIES || 20) : 1;
+  const delayMs = Number(process.env.DB_PUSH_RETRY_DELAY_MS || 1500);
+
+  if (provider === "postgresql") {
+    // If migrations exist, prefer migrate deploy; otherwise fall back to db push (dev only)
+    const migrationsDir = path.join(prismaDir, "migrations");
+    let hasMigrations = false;
+    try {
+      const entries = await fs.readdir(migrationsDir);
+      hasMigrations = (entries || []).some((e) => !e.startsWith("."));
+    } catch {}
+
+    if (hasMigrations) {
+      try {
+        await runWithRetries("npx", ["prisma", "migrate", "deploy"], attempts, delayMs);
+      } catch (e: any) {
+        const msg = (e as Error)?.message || String(e);
+        const nonProd = (process.env.NODE_ENV || "development") !== "production";
+        if (nonProd) {
+          console.warn("migrate deploy failed; falling back to db push for dev:", msg);
+          await runWithRetries("npx", ["prisma", "db", "push", "--skip-generate", "--accept-data-loss"], attempts, delayMs);
+        } else {
+          throw e;
+        }
+      }
+    } else {
+      // No migrations present; use db push in dev for convenience
+      const nonProd = (process.env.NODE_ENV || "development") !== "production";
+      if (!nonProd) {
+        console.error("No migrations found and running in production. Please generate and ship migrations.");
+        process.exit(1);
+      }
+      await runWithRetries("npx", ["prisma", "db", "push", "--skip-generate", "--accept-data-loss"], attempts, delayMs);
+    }
+  } else {
+    await runWithRetries("npx", ["prisma", "db", "push", "--skip-generate", "--accept-data-loss"], attempts, delayMs);
+  }
+}
+
+function generatePrismaClient() {
+  return run("npx", ["prisma", "generate"]);
+}
+
+async function createLocalForkIfEnabled(shouldCreateLocalFork: boolean) {
+  let fork: Awaited<ReturnType<typeof createFork>> | undefined;
+  if (shouldCreateLocalFork) {
+    try {
+      fork = await createFork();
+    } catch (e) {
+      console.error("Failed to create fork", e);
+    }
+
+    if (fork?.url) {
+      try {
+        await waitForRpcReady(fork.url);
+      } catch (e) {
+        console.error("Failed to wait for RPC ready", e);
+      }
+    }
+  }
+  return fork;
+}
+
+function spawnServerWithWatch(useWatch: boolean) {
+  return spawn(useWatch ? "npx" : "node", useWatch ? ["tsx", "watch", "src/index.ts"] : ["dist/src/index.js"], {
+    stdio: "inherit",
+    cwd: backendDir,
+    env: { ...process.env },
+    shell: true,
+  });
+}
+
+function createStop(
+  server: ReturnType<typeof spawn> | undefined,
+  fork: Awaited<ReturnType<typeof createFork>> | undefined,
+  provider: "sqlite" | "postgresql",
+  sqliteDbCandidates: Set<string>,
+  changed: boolean,
+  original?: string
+) {
+  return async (code?: number) => {
+    try { server?.kill(); } catch {}
+    await fork?.close().catch(() => {});
+    if (provider === "sqlite") {
+      await Promise.all(Array.from(sqliteDbCandidates).map((p) => fs.rm(p, { force: true }).catch(() => {})));
+    }
+    await restorePrismaSchemaIfChanged(changed, original);
+    try { await run("npx", ["prisma", "generate"]); } catch {}
+    process.exit(code ?? 0);
+  };
+}
+
+function attachProcessAndServerHandlers(server: ReturnType<typeof spawn>, stop: (code?: number) => Promise<void>) {
+  process.on("SIGINT", () => stop(130));
+  process.on("SIGTERM", () => stop(143));
+  process.on("uncaughtException", async (err) => {
+    console.error(err);
+    await stop(1);
+  });
+
+  server.on("close", async (code) => {
+    await stop(code ?? 0);
+  });
+}
+
+async function maybeSeedAfterStart(autoSeed: boolean) {
+  if (autoSeed && process.env.FORK_RPC_URL) {
+    try {
+      const useWatchSeed = shouldUseWatch();
+      await run("npm", ["run", useWatchSeed ? "seed" : "seed:docker"]);
+    } catch (e) {
+      console.error("Seed failed, continuing startup.", e);
+    }
+  }
+}
+
+async function main() {
+  initializeEnvironment();
+
+  const provider = determineProvider();
+
+  applyDefaultSqliteDbUrl(provider);
+
+  const sqliteDbCandidates = collectSqliteDbCandidates(provider);
 
   const { changed, original } = await ensurePrismaProvider(provider);
 
@@ -129,101 +258,21 @@ async function main() {
   let fork: Awaited<ReturnType<typeof createFork>> | undefined;
   let server: ReturnType<typeof spawn> | undefined;
   try {
-    // Prepare DB and client
-    const attempts = provider === "postgresql" ? Number(process.env.DB_PUSH_RETRIES || 20) : 1;
-    const delayMs = Number(process.env.DB_PUSH_RETRY_DELAY_MS || 1500);
-    if (provider === "postgresql") {
-      // If migrations exist, prefer migrate deploy; otherwise fall back to db push (dev only)
-      const migrationsDir = path.join(prismaDir, "migrations");
-      let hasMigrations = false;
-      try {
-        const entries = await fs.readdir(migrationsDir);
-        hasMigrations = (entries || []).some((e) => !e.startsWith("."));
-      } catch {}
+    await prepareDatabase(provider);
+    await generatePrismaClient();
 
-      if (hasMigrations) {
-        try {
-          await runWithRetries("npx", ["prisma", "migrate", "deploy"], attempts, delayMs);
-        } catch (e: any) {
-          const msg = (e as Error)?.message || String(e);
-          const nonProd = (process.env.NODE_ENV || "development") !== "production";
-          if (nonProd) {
-            console.warn("migrate deploy failed; falling back to db push for dev:", msg);
-            await runWithRetries("npx", ["prisma", "db", "push", "--skip-generate", "--accept-data-loss"], attempts, delayMs);
-          } else {
-            throw e;
-          }
-        }
-      } else {
-        // No migrations present; use db push in dev for convenience
-        const nonProd = (process.env.NODE_ENV || "development") !== "production";
-        if (!nonProd) {
-          console.error("No migrations found and running in production. Please generate and ship migrations.");
-          process.exit(1);
-        }
-        await runWithRetries("npx", ["prisma", "db", "push", "--skip-generate", "--accept-data-loss"], attempts, delayMs);
-      }
-    } else {
-      await runWithRetries("npx", ["prisma", "db", "push", "--skip-generate", "--accept-data-loss"], attempts, delayMs);
-    }
-    await run("npx", ["prisma", "generate"]);
-
-    if (shouldCreateLocalFork) {
-      try {
-        fork = await createFork();
-      } catch (e) {
-        console.error("Failed to create fork", e);
-      }
-
-      if (fork?.url) {
-        try {
-          await waitForRpcReady(fork.url);
-        } catch (e) {
-          console.error("Failed to wait for RPC ready", e);
-        }
-      }
-    }
+    fork = await createLocalForkIfEnabled(shouldCreateLocalFork);
 
     // Start the server
     const useWatch = shouldUseWatch();
-    server = spawn(useWatch ? "npx" : "node", useWatch ? ["tsx", "watch", "src/index.ts"] : ["dist/src/index.js"], {
-      stdio: "inherit",
-      cwd: backendDir,
-      env: { ...process.env },
-      shell: true,
-    });
+    server = spawnServerWithWatch(useWatch);
 
-    const stop = async (code?: number) => {
-      try { server?.kill(); } catch {}
-      await fork?.close().catch(() => {});
-      if (provider === "sqlite") {
-        await Promise.all(Array.from(sqliteDbCandidates).map((p) => fs.rm(p, { force: true }).catch(() => {})));
-      }
-      await restorePrismaSchemaIfChanged(changed, original);
-      try { await run("npx", ["prisma", "generate"]); } catch {}
-      process.exit(code ?? 0);
-    };
+    const stop = createStop(server, fork, provider, sqliteDbCandidates, changed, original);
 
-    process.on("SIGINT", () => stop(130));
-    process.on("SIGTERM", () => stop(143));
-    process.on("uncaughtException", async (err) => {
-      console.error(err);
-      await stop(1);
-    });
-
-    server.on("close", async (code) => {
-      await stop(code ?? 0);
-    });
+    attachProcessAndServerHandlers(server, stop);
 
     // Kick off seeding after server is up (only if an RPC is configured)
-    if (autoSeed && process.env.FORK_RPC_URL) {
-      try {
-        const useWatchSeed = shouldUseWatch();
-        await run("npm", ["run", useWatchSeed ? "seed" : "seed:docker"]);
-      } catch (e) {
-        console.error("Seed failed, continuing startup.", e);
-      }
-    }
+    await maybeSeedAfterStart(autoSeed);
   } catch (err) {
     console.error(err);
     await fork?.close().catch(() => {});

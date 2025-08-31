@@ -36,7 +36,7 @@ Defaults:
 
 ## Docker Compose
 
-This repo includes a `docker-compose.yml` that starts a complete stack:
+This repo includes a `docker-compose.yml` that starts a complete stack for local testing:
 - `fork` — Ganache JSON‑RPC at `http://localhost:8545`
 - `db` — Postgres 16 with a `re7` database
 - `backend` — API on `http://localhost:4000`
@@ -46,6 +46,11 @@ Run:
 
 ```bash
 docker compose up --build
+```
+
+To exclude spinning up a fork and seeding it with ERC20 tokens, use `docker-compose-prod.yml` instead
+```bash
+docker compose -f .\docker-compose-prod.yml up --build
 ```
 
 Environment defaults in compose (edit as needed):

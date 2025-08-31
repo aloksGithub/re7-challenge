@@ -18,7 +18,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/re7?schema=public
       NODE_ENV: production
       PORT: 4000
-      # Default ganache private key
+      # NOTE: Replace PRIVATE_KEY and API_KEY with your own
       PRIVATE_KEY: "0xc87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3"
       API_KEY: ${API_KEY:-prod-key}
       ENABLE_FORK: false

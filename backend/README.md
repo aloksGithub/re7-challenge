@@ -56,6 +56,7 @@ Common:
   - `postgresql://postgres:postgres@localhost:5432/re7?schema=public`
   - `file:./dev.db?connection_limit=1`
 - `PRIVATE_KEY` (required for `/wallet-address` and `/transfer`; set automatically in dev if using the local fork helper)
+- `API_KEY` (required for authenticated endpoints like `/transfer` and all admin endpoints)
 - RPCs (defaults provided if omitted):
   - `MAINNET_RPC_URL` (default `https://ethereum.publicnode.com`)
   - `SEPOLIA_RPC_URL` (default `https://ethereum-sepolia.publicnode.com`)
@@ -80,6 +81,8 @@ export PRIVATE_KEY="0x..."
 
 Base URL: `http://localhost:4000`
 
+- Authentication: Sensitive endpoints require an API key provided via the `x-api-key` header. Set `API_KEY` in the server environment and include the same value in requests.
+
 - `GET /healthz` → `{ ok: true }`
 - `GET /networks` → Supported networks: `ethereum`, `sepolia`, `matic` (+ `localhost` in non‑prod)
 - `GET /wallet-address` → The server wallet address (derived from `PRIVATE_KEY`)
@@ -92,7 +95,7 @@ Transactions
 - `GET /transactions/:address/:token` → Transactions for `address` and `token`
 
 Transfers
-- `POST /transfer` → Submit ERC‑20 transfer
+- `POST /transfer` (requires `x-api-key`) → Submit ERC‑20 transfer
 
 Request body:
 ```json
@@ -106,9 +109,18 @@ Request body:
 
 Responses:
 - `202 { "hash": "0x..." }` on acceptance
-- `400` for validation/blacklist errors; `5xx` for upstream/provider issues (normalized)
+- `400` for validation/blacklist errors; `401` for missing/invalid API key; `5xx` for upstream/provider issues (normalized)
+
+Example (with API key):
+```bash
+curl -X POST "$API_BASE/transfer" \
+  -H "content-type: application/json" \
+  -H "x-api-key: $API_KEY" \
+  -d '{"network":"sepolia","to":"0x...","token":"0x...","amount":"1.5"}'
+```
 
 Admin
+- All admin endpoints require the `x-api-key` header:
 - `POST /blacklist` → `{ address, reason? }`
 - `POST /add-supported-token` → `{ network, token: { tokenAddress, symbol, name, decimals, enabled? } }`
 - `POST /remove-supported-token` → `{ network, token }` (token is address)
