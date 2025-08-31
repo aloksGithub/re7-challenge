@@ -97,7 +97,7 @@ async function main() {
     // Kick off seeding after server is up
     if (shouldSeed) {
       try {
-        await run("npm", ["run", "seed"]);
+        await run("npm", ["run", "seed:docker"]);
       } catch (e) {
         console.error("Seed failed, continuing startup.", e);
       }

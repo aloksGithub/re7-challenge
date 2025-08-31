@@ -4,7 +4,16 @@ import type { BalanceItem, Network, SupportedToken, TransactionItem, WalletAddre
 async function handle<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(text || `Request failed with ${res.status}`);
+    let message = text || `Request failed with ${res.status}`;
+    try {
+      if (text) {
+        const data = JSON.parse(text);
+        message = data?.error?.message || data?.message || message;
+      }
+    } catch {
+      // non-JSON body; keep message as-is
+    }
+    throw new Error(message);
   }
   return res.json() as Promise<T>;
 }

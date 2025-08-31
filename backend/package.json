@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx scripts/dev.ts",
-    "seed": "node dist/scripts/seed-tokens.js",
+    "seed": "tsx scripts/seed-tokens.ts",
+    "seed:docker": "node dist/scripts/seed-tokens.js",
     "create-fork": "tsx scripts/create-fork.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/scripts/start.js",

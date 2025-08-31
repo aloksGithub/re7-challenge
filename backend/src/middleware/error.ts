@@ -32,14 +32,9 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
 
   const payload: Record<string, unknown> = { message };
   if (code) payload.code = code;
-  if (details) payload.details = details;
 
-  console.log(err)
-
-  if (process.env.NODE_ENV !== "production" && !(isHttp && err.details)) {
-    // include stack for debugging in non-prod
-    payload.stack = (err as any)?.stack;
-  }
+  console.error(err)
+  console.error(`Error details:`, details)
 
   res.status(status).json({ error: payload });
 }
