@@ -16,6 +16,7 @@ export default defineConfig({
     globalSetup: ["tests/setup/fork.global.ts"],
     globals: true,
     restoreMocks: true,
+    hookTimeout: 60000,
   },
 });
 

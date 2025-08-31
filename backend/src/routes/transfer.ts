@@ -39,7 +39,7 @@ function mapTransferError(err: any): { status: number; message: string; code?: s
     if (n >= 400 && n < 500) return { status: n, message: "Request failed", code };
     if (n >= 500 && n < 600) return { status: n, message: "Upstream service error", code };
   }
-  return { status: 500, message: "Transfer failed", code, details: process.env.NODE_ENV !== "production" ? rawMessage : undefined };
+  return { status: 500, message: "Transfer failed", code, details: rawMessage };
 }
 
 router.post("/transfer", asyncHandler(async (req: Request, res: Response) => {

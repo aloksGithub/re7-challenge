@@ -1,7 +1,9 @@
+import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
-import { ensurePrismaProvider, restorePrismaSchemaIfChanged } from "./prisma-schema.js";
+import dotenv from "dotenv";
+import { ensurePrismaProvider, restorePrismaSchemaIfChanged, resolveSqliteFileFromEnvValue } from "./prisma-schema.js";
 import { createFork } from "./create-fork.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -9,13 +11,16 @@ const __dirname = path.dirname(__filename);
 // Resolve backend root correctly in both dev (scripts) and prod (dist/scripts)
 const candidate = path.resolve(__dirname, "..");
 const backendDir = path.basename(candidate) === "dist" ? path.resolve(candidate, "..") : candidate;
+const prismaDir = path.join(backendDir, "prisma");
 
-function run(command: string, args: string[], extraEnv: NodeJS.ProcessEnv = {}) {
+dotenv.config();
+
+export function run(command: string, args: string[]) {
   return new Promise<number>((resolve, reject) => {
     const child = spawn(command, args, {
       stdio: "inherit",
       cwd: backendDir,
-      env: { ...process.env, ...extraEnv },
+      env: { ...process.env },
       shell: true,
     });
     child.on("close", (code) => {
@@ -23,6 +28,26 @@ function run(command: string, args: string[], extraEnv: NodeJS.ProcessEnv = {}) 
       else reject(new Error(`${command} ${args.join(" ")} exited with code ${code}`));
     });
   });
+}
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function runWithRetries(command: string, args: string[], attempts: number, delayMs: number) {
+  let lastError: unknown;
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      await run(command, args);
+      return;
+    } catch (e) {
+      lastError = e;
+      const message = (e as Error)?.message || String(e);
+      console.error(`Attempt ${i}/${attempts} failed: ${message}`);
+      if (i < attempts) await sleep(delayMs);
+    }
+  }
+  throw lastError;
 }
 
 async function waitForRpcReady(url: string, timeoutSeconds = 60) {
@@ -40,22 +65,61 @@ async function waitForRpcReady(url: string, timeoutSeconds = 60) {
   throw new Error("RPC not ready after waiting");
 }
 
+function determineProvider(): "sqlite" | "postgresql" {
+  const explicit = (process.env.PRISMA_PROVIDER || "").toLowerCase();
+  if (explicit === "sqlite" || explicit === "postgresql") return explicit as any;
+  const dbUrl = process.env.DATABASE_URL || "";
+  if (dbUrl.startsWith("file:")) return "sqlite";
+  if (/^postgres(ql)?:\/\//i.test(dbUrl)) return "postgresql";
+  // Default to sqlite in non-dist dev runs, otherwise postgres
+  const isDist = path.basename(candidate) === "dist";
+  return isDist ? "postgresql" : "sqlite";
+}
+
+function shouldUseWatch(): boolean {
+  const isDist = path.basename(candidate) === "dist";
+  if (isDist) return false;
+  const env = (process.env.USE_WATCH || "").toLowerCase();
+  if (env === "true") return true;
+  if (env === "false") return false;
+  return (process.env.NODE_ENV || "development") !== "production";
+}
+
 async function main() {
-  process.env.NODE_ENV = process.env.NODE_ENV || "production";
+  // Determine runtime behaviour from env
+  process.env.NODE_ENV = process.env.NODE_ENV || "development";
 
-  // Ensure we use PostgreSQL in Docker
-  const { changed, original } = await ensurePrismaProvider("postgresql");
+  const provider = determineProvider();
 
-  const shouldSeed = String(process.env.AUTO_SEED_ON_START ?? "true").toLowerCase() !== "false";
-  const shouldFork = String(process.env.ENABLE_FORK ?? "false").toLowerCase() === "true";
+  // Default to local sqlite db for dev if not provided
+  if (provider === "sqlite" && !process.env.DATABASE_URL) {
+    process.env.DATABASE_URL = "file:./dev.db?connection_limit=1";
+  }
+
+  const sqliteDbCandidates = new Set<string>();
+  const resolvedDbFile = resolveSqliteFileFromEnvValue(process.env.DATABASE_URL);
+  if (provider === "sqlite") {
+    if (resolvedDbFile) sqliteDbCandidates.add(resolvedDbFile);
+    sqliteDbCandidates.add(path.join(backendDir, "dev.db"));
+    sqliteDbCandidates.add(path.join(prismaDir, "dev.db"));
+  }
+
+  const { changed, original } = await ensurePrismaProvider(provider);
+
+  const autoSeed = String(process.env.AUTO_SEED_ON_START ?? "true").toLowerCase() !== "false";
+  const enableForkEnv = (process.env.ENABLE_FORK || "").toLowerCase();
+  const shouldCreateLocalFork = enableForkEnv === "true" ? true : enableForkEnv === "false" ? false : !process.env.FORK_RPC_URL;
 
   let fork: Awaited<ReturnType<typeof createFork>> | undefined;
+  let server: ReturnType<typeof spawn> | undefined;
   try {
-    // Prepare DB and client for PostgreSQL
-    await run("npx", ["prisma", "db", "push", "--skip-generate", "--accept-data-loss"]);
+    // Prepare DB and client
+    const attempts = provider === "postgresql" ? Number(process.env.DB_PUSH_RETRIES || 20) : 1;
+    const delayMs = Number(process.env.DB_PUSH_RETRY_DELAY_MS || 1500);
+    await runWithRetries("npx", ["prisma", "db", "push", "--skip-generate", "--accept-data-loss"], attempts, delayMs);
     await run("npx", ["prisma", "generate"]);
 
-    if (shouldFork) {
+    if (shouldCreateLocalFork) {
       try {
         fork = await createFork();
       } catch (e) {
@@ -72,7 +136,8 @@ async function main() {
     }
 
     // Start the server
-    const server = spawn("node", ["dist/src/index.js"], {
+    const useWatch = shouldUseWatch();
+    server = spawn(useWatch ? "npx" : "node", useWatch ? ["tsx", "watch", "src/index.ts"] : ["dist/src/index.js"], {
       stdio: "inherit",
       cwd: backendDir,
       env: { ...process.env },
@@ -80,9 +145,13 @@ async function main() {
     });
 
     const stop = async (code?: number) => {
-      try { server.kill(); } catch {}
+      try { server?.kill(); } catch {}
       await fork?.close().catch(() => {});
+      if (provider === "sqlite") {
+        await Promise.all(Array.from(sqliteDbCandidates).map((p) => fs.rm(p, { force: true }).catch(() => {})));
+      }
       await restorePrismaSchemaIfChanged(changed, original);
+      try { await run("npx", ["prisma", "generate"]); } catch {}
       process.exit(code ?? 0);
     };
 
@@ -98,9 +167,10 @@ async function main() {
     });
 
     // Kick off seeding after server is up (only if an RPC is configured)
-    if (shouldSeed && process.env.FORK_RPC_URL) {
+    if (autoSeed && process.env.FORK_RPC_URL) {
       try {
-        await run("npm", ["run", "seed:docker"]);
+        const useWatchSeed = shouldUseWatch();
+        await run("npm", ["run", useWatchSeed ? "seed" : "seed:docker"]);
       } catch (e) {
         console.error("Seed failed, continuing startup.", e);
       }

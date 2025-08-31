@@ -30,14 +30,14 @@ describe("POST /transfer (e2e fork)", () => {
     const rpc = process.env.FORK_RPC_URL;
     if (!rpc) throw new Error("No RPC available for deployment");
     const provider = new JsonRpcProvider(rpc);
-		const pk = process.env.PRIVATE_KEY;
-		const signer = pk && pk.length > 0 ? new Wallet(pk, provider) : await (provider as any).getSigner();
-		const sender = await signer.getAddress();
-		// Some test nodes require waiting for deployment to be mined before state-changing calls
-		const mintTx = await (token as any).mint(sender, parseUnits("1000", 18));
-		await mintTx.wait?.();
+	const pk = process.env.PRIVATE_KEY;
+	const signer = pk && pk.length > 0 ? new Wallet(pk, provider) : await (provider as any).getSigner();
+	const sender = await signer.getAddress();
+	// Some test nodes require waiting for deployment to be mined before state-changing calls
+	const mintTx = await (token as any).mint(sender, parseUnits("1000", 18));
+	await mintTx.wait?.();
 
-		process.env.E2E_TOKEN_ADDRESS = tokenAddress as string;
+	process.env.E2E_TOKEN_ADDRESS = tokenAddress as string;
 	});
 
 	it("submits transfer and returns tx hash", async () => {

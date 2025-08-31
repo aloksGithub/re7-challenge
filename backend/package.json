@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx scripts/dev.ts",
+    "dev": "tsx scripts/start.ts",
     "seed": "tsx scripts/seed-tokens.ts",
     "seed:docker": "node dist/scripts/seed-tokens.js",
     "create-fork": "tsx scripts/create-fork.ts",
