@@ -38,8 +38,9 @@ async function waitForApiReady(url: string, timeoutSeconds = 60) {
 async function addSupportedToken(apiBaseUrl: string, network: string, token: { tokenAddress: string; symbol: string; name: string; decimals: number }) {
   const res = await fetch(`${apiBaseUrl}/add-supported-token`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...(process.env.API_KEY ? { "x-api-key": process.env.API_KEY } : {}) },
     body: JSON.stringify({ network, token }),
+    
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");

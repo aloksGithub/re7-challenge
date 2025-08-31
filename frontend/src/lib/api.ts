@@ -1,4 +1,4 @@
-import { buildUrl } from "./config";
+import { buildUrl, API_KEY } from "./config";
 import type { BalanceItem, Network, SupportedToken, TransactionItem, WalletAddressResponse } from "./types";
 
 async function handle<T>(res: Response): Promise<T> {
@@ -46,11 +46,8 @@ export async function fetchTransactions(address: string, token: string): Promise
 export async function postTransfer(params: { network: string; to: string; token: string; amount: string; }): Promise<{ hash: string }> {
   const res = await fetch(buildUrl("/transfer"), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(API_KEY ? { "x-api-key": API_KEY } : {}) },
     body: JSON.stringify(params),
   });
   return handle<{ hash: string }>(res);
 }
-
-
-

@@ -47,6 +47,7 @@ describe("POST /transfer (e2e fork)", () => {
 		const amount = process.env.E2E_AMOUNT ?? "0.000001";
 		const res = await request(app)
 			.post("/transfer")
+			.set("x-api-key", process.env.API_KEY || "test-key")
 			.send({ network: "localhost", to, token, amount })
 			.expect(202);
 		expect(res.body.hash).toMatch(/^0x[0-9a-fA-F]{64}$/);

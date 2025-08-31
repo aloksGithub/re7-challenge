@@ -62,7 +62,7 @@ export async function getBalance(user: string, tokenAddress: string, network: st
   const balance = await contract.balanceOf(user);
   const token = await getSupportedToken(network, tokenAddress);
   const decimals = token?.decimals || await contract.decimals();
-  return {balance: +formatUnits(balance, decimals), decimals};
+  return {balance: formatUnits(balance, decimals), decimals};
 }
 
 export async function getNetworkBalances(user: string, network: string) {

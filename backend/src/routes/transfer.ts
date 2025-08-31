@@ -3,8 +3,18 @@ import { getAddressFromEnv, transferErc20 } from "../services/contract.js";
 import { addTransaction, isBlacklisted } from "../services/dbService.js";
 import { asyncHandler, HttpError } from "../middleware/error.js";
 import { assertSupportedNetwork, assertValidAddress } from "../utils/validation.js";
+import { requireApiKey } from "../middleware/apiKey.js";
+import { validate } from "../middleware/validate.js";
+import { z } from "zod";
 
 const router = Router();
+
+const transferBodySchema = z.object({
+  network: z.string().min(1),
+  to: z.string().min(1),
+  token: z.string().min(1),
+  amount: z.string().regex(/^\d+(\.\d+)?$/, "amount must be a positive decimal"),
+});
 
 function mapTransferError(err: any): { status: number; message: string; code?: string; details?: unknown } {
   const rawMessage: string = String(err?.message ?? err ?? "");
@@ -42,8 +52,8 @@ function mapTransferError(err: any): { status: number; message: string; code?: s
   return { status: 500, message: "Transfer failed", code, details: rawMessage };
 }
 
-router.post("/transfer", asyncHandler(async (req: Request, res: Response) => {
-  const { to, token, amount, network } = req.body ?? {};
+router.post("/transfer", requireApiKey, validate(transferBodySchema), asyncHandler(async (req: Request, res: Response) => {
+  const { to, token, amount, network } = req.body as z.infer<typeof transferBodySchema>;
   assertSupportedNetwork(network);
   assertValidAddress(to, "to");
   assertValidAddress(token, "token");

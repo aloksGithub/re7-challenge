@@ -12,13 +12,13 @@ describe("tokens routes", () => {
 
 	it("GET /tokens/:address returns balances via service", async () => {
 		(contractSvc.getBalances as any).mockResolvedValue([
-			{ network: "sepolia", symbol: "USDC", name: "USD Coin", balance: 1.23, decimals: 6 },
+			{ network: "sepolia", symbol: "USDC", name: "USD Coin", balance: "1.23", decimals: 6 },
 		]);
 
 		const addr = "0x0000000000000000000000000000000000000001";
 		const res = await request(app).get(`/tokens/${addr}`).expect(200);
 		expect(res.body).toEqual([
-			{ network: "sepolia", symbol: "USDC", name: "USD Coin", balance: 1.23, decimals: 6 },
+			{ network: "sepolia", symbol: "USDC", name: "USD Coin", balance: "1.23", decimals: 6 },
 		]);
 		expect(contractSvc.getBalances).toHaveBeenCalledWith(addr);
 	});

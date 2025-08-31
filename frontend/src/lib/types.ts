@@ -6,7 +6,7 @@ export type BalanceItem = {
   network: string;
   symbol: string;
   name: string;
-  balance: number;
+  balance: string;
   decimals: number;
 };
 

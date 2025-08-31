@@ -5,7 +5,18 @@ import { errorHandler, notFound } from "./middleware/error.js";
 
 const app = express();
 
-app.use(cors());
+// Tightened CORS: allow only configured origin(s)
+const corsOrigins = (process.env.CORS_ALLOWED_ORIGINS || "http://localhost:3000").split(",").map((s) => s.trim()).filter(Boolean);
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // allow server-to-server and curl
+    if (corsOrigins.includes(origin)) return cb(null, true);
+    cb(new Error("CORS origin not allowed"));
+  },
+  credentials: false,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "x-api-key"],
+}));
 app.use(express.json());
 
 app.get("/healthz", (_req: Request, res: Response) => {

@@ -89,6 +89,23 @@ async function main() {
   // Determine runtime behaviour from env
   process.env.NODE_ENV = process.env.NODE_ENV || "development";
 
+  // Check for missing environment variables
+  if (process.env.NODE_ENV === 'prod' || process.env.NODE_ENV==='production') {
+    if (!process.env.API_KEY) {
+      console.error("API_KEY is not set in production");
+      process.exit(1);
+    }
+    if (process.env.API_KEY === "dev-key") {
+      console.error("API_KEY is not dev-key in production");
+      process.exit(1);
+    }
+    if (!process.env.DATABASE_URL) {
+      console.error("DATABASE_URL is not set in production");
+      process.exit(1);
+    }
+  }
+  process.env.API_KEY = process.env.API_KEY || "dev-key";
+
   const provider = determineProvider();
 
   // Default to local sqlite db for dev if not provided
@@ -106,9 +123,8 @@ async function main() {
 
   const { changed, original } = await ensurePrismaProvider(provider);
 
-  const autoSeed = String(process.env.AUTO_SEED_ON_START ?? "true").toLowerCase() !== "false";
-  const enableForkEnv = (process.env.ENABLE_FORK || "").toLowerCase();
-  const shouldCreateLocalFork = enableForkEnv === "true" ? true : enableForkEnv === "false" ? false : !process.env.FORK_RPC_URL;
+  const autoSeed = (process.env.AUTO_SEED_ON_START || "").toLowerCase() === "true";
+  const shouldCreateLocalFork = (process.env.ENABLE_FORK || "").toLowerCase() === "true";
 
   let fork: Awaited<ReturnType<typeof createFork>> | undefined;
   let server: ReturnType<typeof spawn> | undefined;
@@ -116,7 +132,40 @@ async function main() {
     // Prepare DB and client
     const attempts = provider === "postgresql" ? Number(process.env.DB_PUSH_RETRIES || 20) : 1;
     const delayMs = Number(process.env.DB_PUSH_RETRY_DELAY_MS || 1500);
-    await runWithRetries("npx", ["prisma", "db", "push", "--skip-generate", "--accept-data-loss"], attempts, delayMs);
+    if (provider === "postgresql") {
+      // If migrations exist, prefer migrate deploy; otherwise fall back to db push (dev only)
+      const migrationsDir = path.join(prismaDir, "migrations");
+      let hasMigrations = false;
+      try {
+        const entries = await fs.readdir(migrationsDir);
+        hasMigrations = (entries || []).some((e) => !e.startsWith("."));
+      } catch {}
+
+      if (hasMigrations) {
+        try {
+          await runWithRetries("npx", ["prisma", "migrate", "deploy"], attempts, delayMs);
+        } catch (e: any) {
+          const msg = (e as Error)?.message || String(e);
+          const nonProd = (process.env.NODE_ENV || "development") !== "production";
+          if (nonProd) {
+            console.warn("migrate deploy failed; falling back to db push for dev:", msg);
+            await runWithRetries("npx", ["prisma", "db", "push", "--skip-generate", "--accept-data-loss"], attempts, delayMs);
+          } else {
+            throw e;
+          }
+        }
+      } else {
+        // No migrations present; use db push in dev for convenience
+        const nonProd = (process.env.NODE_ENV || "development") !== "production";
+        if (!nonProd) {
+          console.error("No migrations found and running in production. Please generate and ship migrations.");
+          process.exit(1);
+        }
+        await runWithRetries("npx", ["prisma", "db", "push", "--skip-generate", "--accept-data-loss"], attempts, delayMs);
+      }
+    } else {
+      await runWithRetries("npx", ["prisma", "db", "push", "--skip-generate", "--accept-data-loss"], attempts, delayMs);
+    }
     await run("npx", ["prisma", "generate"]);
 
     if (shouldCreateLocalFork) {

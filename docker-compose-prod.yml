@@ -1,17 +1,5 @@
 version: "3.9"
 services:
-  fork:
-    image: trufflesuite/ganache:v7.9.2
-    command: >-
-      --chain.chainId=1337
-      --wallet.mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
-      --wallet.totalAccounts=10
-      --wallet.defaultBalance=1000000
-      --server.host=0.0.0.0
-      --miner.blockTime=1
-    ports:
-      - "8545:8545"
-
   db:
     image: postgres:16-alpine
     environment:
@@ -27,18 +15,15 @@ services:
     build:
       context: ./backend
     environment:
-      AUTO_SEED_ON_START: true
       DATABASE_URL: postgresql://postgres:postgres@db:5432/re7?schema=public
-      NODE_ENV: development
+      NODE_ENV: production
       PORT: 4000
       # Default ganache private key
       PRIVATE_KEY: "0xc87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3"
-      FORK_RPC_URL: http://fork:8545
-      LOCALHOST_RPC_URL: http://fork:8545
-      API_KEY: ${API_KEY:-dev-key}
+      API_KEY: ${API_KEY:-prod-key}
+      ENABLE_FORK: false
     depends_on:
       - db
-      - fork
     ports:
       - "4000:4000"
 
@@ -47,11 +32,11 @@ services:
       context: ./frontend
       args:
         NEXT_PUBLIC_API_BASE_URL: http://localhost:4000
-        NEXT_PUBLIC_API_KEY: ${API_KEY:-dev-key}
+        NEXT_PUBLIC_API_KEY: ${API_KEY:-prod-key}
     environment:
       PORT: 3000
       NEXT_PUBLIC_API_BASE_URL: http://localhost:4000
-      NEXT_PUBLIC_API_KEY: ${API_KEY:-dev-key}
+      NEXT_PUBLIC_API_KEY: ${API_KEY:-prod-key}
     depends_on:
       - backend
     ports:

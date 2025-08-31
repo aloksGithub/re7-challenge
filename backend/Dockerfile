@@ -2,7 +2,7 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund --loglevel=warn
+RUN --mount=type=cache,target=/root/.npm npm i --no-audit --no-fund --loglevel=warn
 
 FROM node:20-alpine AS builder
 WORKDIR /app
@@ -19,7 +19,6 @@ RUN npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
-ENV NODE_ENV=production
 RUN apk add --no-cache openssl libssl3
 ENV PRISMA_CLI_BINARY_TARGETS=linux-musl-openssl-3.0.x
 COPY package*.json ./

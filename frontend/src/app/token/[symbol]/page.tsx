@@ -34,31 +34,27 @@ function TransferForm({ tokenAddress }: { tokenAddress: string }) {
   const transfer = useTransfer();
   const [modal, setModal] = useState<{ visible: boolean; type: "success" | "error"; message?: string; hash?: string }>({ visible: false, type: "success" });
   const [modalMounted, setModalMounted] = useState(false);
+  const [errors, setErrors] = useState<{ to?: string; amount?: string }>({});
 
   function summarizeError(err: unknown): string {
-    const message = err instanceof Error ? err.message : String(err ?? "");
-    const codeMatch = String(message).match(/\b(4\d{2}|5\d{2})\b/);
-    const code = codeMatch?.[1];
-    const codeMap: Record<string, string> = {
-      "400": "Bad Request",
-      "401": "Unauthorized",
-      "403": "Forbidden",
-      "404": "Not Found",
-      "422": "Unprocessable Entity",
-      "429": "Too Many Requests",
-      "500": "Internal Server Error",
-      "502": "Bad Gateway",
-      "503": "Service Unavailable",
+    const anyErr = err as {
+      message?: string;
+      code?: string | number;
+      error?: { message?: string; code?: string | number };
+      data?: { error?: { message?: string; code?: string | number } };
     };
-    if (code) return `${code} ${codeMap[code] ?? "Error"}`;
+    const serverMsg = anyErr?.message || anyErr?.error?.message || anyErr?.data?.error?.message;
+    const serverCode = anyErr?.code || anyErr?.error?.code || anyErr?.data?.error?.code;
+    if (serverMsg) return serverCode ? `${serverMsg} (${serverCode})` : serverMsg;
+    const message = err instanceof Error ? err.message : String(err ?? "");
     const lower = String(message).toLowerCase();
     if (lower.includes("insufficient")) return "Insufficient funds";
     if (lower.includes("revert")) return "Transaction reverted";
     if (lower.includes("timeout")) return "Network timeout";
-    if (lower.includes("forbidden")) return "403 Forbidden";
-    if (lower.includes("unauthorized")) return "401 Unauthorized";
-    if (lower.includes("not found")) return "404 Not Found";
-    if (lower.includes("server")) return "500 Internal Server Error";
+    if (lower.includes("forbidden")) return "Forbidden";
+    if (lower.includes("unauthorized")) return "Unauthorized";
+    if (lower.includes("not found")) return "Not Found";
+    if (lower.includes("server")) return "Server error";
     const brief = String(message).split(/[\.!\n\r]/)[0]?.slice(0, 80).trim();
     return brief || "Unexpected error";
   }
@@ -101,6 +97,16 @@ function TransferForm({ tokenAddress }: { tokenAddress: string }) {
     return () => clearTimeout(t);
   }, [modal.visible, modalMounted]);
 
+  function validateInputs(): boolean {
+    const next: { to?: string; amount?: string } = {};
+    const toTrim = to.trim();
+    const amountTrim = amount.trim();
+    if (!/^0x[a-fA-F0-9]{40}$/.test(toTrim)) next.to = "Enter a valid EVM address";
+    if (!/^\d+(\.\d+)?$/.test(amountTrim)) next.amount = "Enter a positive decimal amount";
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  }
+
   return (
     <>
     <form
@@ -108,16 +114,19 @@ function TransferForm({ tokenAddress }: { tokenAddress: string }) {
       onSubmit={(e) => {
         e.preventDefault();
         if (!selected) return;
+        if (!validateInputs()) return;
         transfer.mutate({ network: selected, to, token: tokenAddress, amount });
       }}
     >
       <div className="flex flex-col">
         <label className="text-sm">To</label>
-        <input className="border border-[var(--border)] bg-[var(--surface)] rounded px-2 py-2" value={to} onChange={(e) => setTo(e.target.value)} placeholder="0x..." />
+        <input className={`border ${errors.to ? "border-red-500" : "border-[var(--border)]"} bg-[var(--surface)] rounded px-2 py-2`} value={to} onChange={(e) => setTo(e.target.value)} placeholder="0x..." />
+        {errors.to && <span className="text-xs text-red-600 mt-1">{errors.to}</span>}
       </div>
       <div className="flex flex-col">
         <label className="text-sm">Amount</label>
-        <input className="border border-[var(--border)] bg-[var(--surface)] rounded px-2 py-2" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="1.5" />
+        <input className={`border ${errors.amount ? "border-red-500" : "border-[var(--border)]"} bg-[var(--surface)] rounded px-2 py-2`} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="1.5" />
+        {errors.amount && <span className="text-xs text-red-600 mt-1">{errors.amount}</span>}
       </div>
       <div className="flex items-center gap-2">
         <button type="submit" className="bg-[var(--accent)] text-white px-4 py-2 rounded shadow hover:opacity-90 transition" disabled={transfer.isPending}>
