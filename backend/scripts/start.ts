@@ -6,7 +6,9 @@ import { createFork } from "./create-fork.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const backendDir = path.resolve(__dirname, "..");
+// Resolve backend root correctly in both dev (scripts) and prod (dist/scripts)
+const candidate = path.resolve(__dirname, "..");
+const backendDir = path.basename(candidate) === "dist" ? path.resolve(candidate, "..") : candidate;
 
 function run(command: string, args: string[], extraEnv: NodeJS.ProcessEnv = {}) {
   return new Promise<number>((resolve, reject) => {
@@ -44,15 +46,16 @@ async function main() {
   // Ensure we use PostgreSQL in Docker
   const { changed, original } = await ensurePrismaProvider("postgresql");
 
+  const shouldSeed = String(process.env.AUTO_SEED_ON_START ?? "true").toLowerCase() !== "false";
+  const shouldFork = String(process.env.ENABLE_FORK ?? "false").toLowerCase() === "true";
+
   let fork: Awaited<ReturnType<typeof createFork>> | undefined;
   try {
     // Prepare DB and client for PostgreSQL
     await run("npx", ["prisma", "db", "push", "--skip-generate", "--accept-data-loss"]);
     await run("npx", ["prisma", "generate"]);
 
-    const shouldSeed = String(process.env.AUTO_SEED_ON_START ?? "true").toLowerCase() !== "false";
-
-    if (shouldSeed) {
+    if (shouldFork) {
       try {
         fork = await createFork();
       } catch (e) {
@@ -69,7 +72,7 @@ async function main() {
     }
 
     // Start the server
-    const server = spawn("node", ["dist/index.js"], {
+    const server = spawn("node", ["dist/src/index.js"], {
       stdio: "inherit",
       cwd: backendDir,
       env: { ...process.env },
@@ -94,8 +97,8 @@ async function main() {
       await stop(code ?? 0);
     });
 
-    // Kick off seeding after server is up
-    if (shouldSeed) {
+    // Kick off seeding after server is up (only if an RPC is configured)
+    if (shouldSeed && process.env.FORK_RPC_URL) {
       try {
         await run("npm", ["run", "seed:docker"]);
       } catch (e) {

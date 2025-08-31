@@ -37,9 +37,9 @@ export function useTransactions(address?: string, token?: string) {
 
 export function useTransfer() {
   const qc = useQueryClient();
-  return useMutation({
+  return useMutation<{ hash: string }, Error, { network: string; to: string; token: string; amount: string }>({
     mutationFn: postTransfer,
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
       // Invalidate transactions and balances
       qc.invalidateQueries({ queryKey: ["transactions"] });
       qc.invalidateQueries({ queryKey: ["balances"] });

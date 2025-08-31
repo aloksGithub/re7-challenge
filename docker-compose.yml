@@ -1,5 +1,17 @@
 version: "3.9"
 services:
+  fork:
+    image: trufflesuite/ganache:v7.9.2
+    command: >-
+      --chain.chainId=1337
+      --wallet.mnemonic="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
+      --wallet.totalAccounts=10
+      --wallet.defaultBalance=1000000
+      --server.host=0.0.0.0
+      --miner.blockTime=1
+    ports:
+      - "8545:8545"
+
   db:
     image: postgres:16-alpine
     environment:
@@ -20,10 +32,12 @@ services:
       NODE_ENV: development
       PORT: 4000
       # Default ganache private key
-      PRIVATE_KEY: "0x4f3edf983ac636a65a842ce7c78d9aa706d3b113b37a1f44a8fa7f6fce205b8"
-      FORK_RPC_URL: http://127.0.0.1:8545
+      PRIVATE_KEY: "0xc87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3"
+      FORK_RPC_URL: http://fork:8545
+      LOCALHOST_RPC_URL: http://fork:8545
     depends_on:
       - db
+      - fork
     ports:
       - "4000:4000"
 

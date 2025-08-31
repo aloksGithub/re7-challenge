@@ -36,7 +36,7 @@ function TransferForm({ tokenAddress }: { tokenAddress: string }) {
   const [modalMounted, setModalMounted] = useState(false);
 
   function summarizeError(err: unknown): string {
-    const message = (err as any)?.message ?? String(err ?? "");
+    const message = err instanceof Error ? err.message : String(err ?? "");
     const codeMatch = String(message).match(/\b(4\d{2}|5\d{2})\b/);
     const code = codeMatch?.[1];
     const codeMap: Record<string, string> = {
@@ -66,9 +66,9 @@ function TransferForm({ tokenAddress }: { tokenAddress: string }) {
   useEffect(() => {
     if (transfer.isSuccess) {
       setModalMounted(true);
-      setModal({ visible: true, type: "success", message: "Transfer successful", hash: (transfer.data as any)?.hash });
+      setModal({ visible: true, type: "success", message: "Transfer successful", hash: transfer.data?.hash });
     }
-  }, [transfer.isSuccess]);
+  }, [transfer.isSuccess, transfer.data]);
 
   useEffect(() => {
     if (transfer.isError) {
@@ -167,7 +167,6 @@ function TransferForm({ tokenAddress }: { tokenAddress: string }) {
 
 function History({ tokenAddress }: { tokenAddress: string }) {
   const { data: address } = useWalletAddress();
-  console.log(address)
   const { data: txs, isLoading } = useTransactions(address, tokenAddress);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -264,7 +263,7 @@ function History({ tokenAddress }: { tokenAddress: string }) {
   );
 }
 
-export default function TokenPage({ params }: { params: { symbol: string } }) {
+export default function TokenPage() {
   const search = useSearchParams();
   const { selected } = useNetwork();
   const { symbol } = useParams();

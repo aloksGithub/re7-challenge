@@ -4,7 +4,9 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const backendDir = path.resolve(__dirname, "..");
+// Resolve backend root correctly in both dev (scripts) and prod (dist/scripts)
+const candidate = path.resolve(__dirname, "..");
+const backendDir = path.basename(candidate) === "dist" ? path.resolve(candidate, "..") : candidate;
 const prismaDir = path.join(backendDir, "prisma");
 const schemaPath = path.join(prismaDir, "schema.prisma");
 const backupPath = path.join(prismaDir, "schema.prisma.__dev_backup__");
