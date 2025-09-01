@@ -51,10 +51,19 @@ CREATE INDEX "Transaction_toAddress_network_createdAt_idx" ON "Transaction"("toA
 CREATE INDEX "Transaction_tokenAddress_network_createdAt_idx" ON "Transaction"("tokenAddress", "network", "createdAt");
 
 -- CreateIndex
+CREATE INDEX "Transaction_network_createdAt_idx" ON "Transaction"("network", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "Transaction_fromAddress_tokenAddress_createdAt_idx" ON "Transaction"("fromAddress", "tokenAddress", "createdAt");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "AddressBlacklist_address_key" ON "AddressBlacklist"("address");
 
 -- CreateIndex
 CREATE INDEX "SupportedToken_network_symbol_idx" ON "SupportedToken"("network", "symbol");
+
+-- CreateIndex
+CREATE INDEX "SupportedToken_network_enabled_symbol_name_idx" ON "SupportedToken"("network", "enabled", "symbol", "name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "SupportedToken_network_tokenAddress_key" ON "SupportedToken"("network", "tokenAddress");

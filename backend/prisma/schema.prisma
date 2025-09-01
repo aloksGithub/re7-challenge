@@ -21,6 +21,8 @@ model Transaction {
   @@index([fromAddress, network, createdAt])
   @@index([toAddress, network, createdAt])
   @@index([tokenAddress, network, createdAt])
+  @@index([network, createdAt])
+  @@index([fromAddress, tokenAddress, createdAt])
 }
 
 model AddressBlacklist {
@@ -43,5 +45,6 @@ model SupportedToken {
 
   @@unique([network, tokenAddress])
   @@index([network, symbol])
+  @@index([network, enabled, symbol, name])
 }
 
