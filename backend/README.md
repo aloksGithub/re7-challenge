@@ -12,14 +12,14 @@ Dev defaults to SQLite unless `DATABASE_URL` points to Postgres.
 
 ## Getting started (local, no Docker)
 
-1) Install dependencies
+1. Install dependencies
 
 ```bash
 cd backend
 npm install
 ```
 
-2) Run in development
+2. Run in development
 
 ```bash
 # Uses SQLite by default and may start a local fork automatically
@@ -28,10 +28,11 @@ npm run dev
 ```
 
 Notes:
+
 - In dev, if `FORK_RPC_URL` is not set, a local Ganache fork is started automatically and the first account’s private key is used. If a fork RPC is available, sample ERC‑20s are deployed and registered under the `localhost` network.
 - If you want to use Postgres locally, set `DATABASE_URL` before starting (see Environment).
 
-3) Build and run (compiled)
+3. Build and run (compiled)
 
 ```bash
 npm run build
@@ -51,6 +52,7 @@ npm start
 ## Environment variables
 
 Common:
+
 - `PORT` (default `4000`)
 - `DATABASE_URL` (Postgres or SQLite). Examples:
   - `postgresql://postgres:postgres@localhost:5432/re7?schema=public`
@@ -68,10 +70,12 @@ Common:
   - `AUTO_SEED_ON_START` (`true` by default) to auto‑deploy/register sample tokens when a fork RPC is reachable
 
 Rarely used:
+
 - `PRISMA_PROVIDER` (`sqlite` or `postgresql`)
 - `DB_PUSH_RETRIES`, `DB_PUSH_RETRY_DELAY_MS`
 
 Example (Postgres + explicit signer):
+
 ```bash
 export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/re7?schema=public"
 export PRIVATE_KEY="0x..."
@@ -88,16 +92,20 @@ Base URL: `http://localhost:4000`
 - `GET /wallet-address` → The server wallet address (derived from `PRIVATE_KEY`)
 
 Tokens
+
 - `GET /tokens/:address` → Aggregated balances for an EVM address across supported networks
 - `GET /supported-tokens/:network` → Supported tokens for a network from DB (enabled only)
 
 Transactions
+
 - `GET /transactions/:address/:token` → Transactions for `address` and `token`
 
 Transfers
+
 - `POST /transfer` (requires `x-api-key`) → Submit ERC‑20 transfer
 
 Request body:
+
 ```json
 {
   "network": "sepolia",
@@ -108,10 +116,12 @@ Request body:
 ```
 
 Responses:
+
 - `202 { "hash": "0x..." }` on acceptance
 - `400` for validation/blacklist errors; `401` for missing/invalid API key; `5xx` for upstream/provider issues (normalized)
 
 Example (with API key):
+
 ```bash
 curl -X POST "$API_BASE/transfer" \
   -H "content-type: application/json" \
@@ -120,6 +130,7 @@ curl -X POST "$API_BASE/transfer" \
 ```
 
 Admin
+
 - All admin endpoints require the `x-api-key` header:
 - `POST /blacklist` → `{ address, reason? }`
 - `POST /add-supported-token` → `{ network, token: { tokenAddress, symbol, name, decimals, enabled? } }`
@@ -128,6 +139,7 @@ Admin
 ## Data model (Prisma)
 
 Key tables:
+
 - `Transaction`: tracked transfers
 - `AddressBlacklist`: addresses prevented from receiving transfers
 - `SupportedToken`: per‑network token allowlist for balances/UX
@@ -142,6 +154,7 @@ npm test
 ```
 
 Notes:
+
 - Tests temporarily switch Prisma to SQLite and clean up the file DB afterward.
 - A local fork may be started automatically; set `FORK_RPC_URL` and `PRIVATE_KEY` to run e2e transfer tests against your own RPC.
 
@@ -150,4 +163,3 @@ Notes:
 - Supported networks/providers: `src/config/networks.ts`
 - Contract interactions: `src/services/contract.ts`
 - DB helpers: `src/services/dbService.ts`
-

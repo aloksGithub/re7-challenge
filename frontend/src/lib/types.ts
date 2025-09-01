@@ -31,6 +31,3 @@ export type TransactionItem = {
   createdAt: string;
   updatedAt: string;
 };
-
-
-

@@ -1,4 +1,4 @@
-import solc from "solc";
+import solc from 'solc';
 
 export type CompiledToken = { abi: any[]; bytecode: string };
 
@@ -31,25 +31,23 @@ export async function compileToken(name: string, symbol: string): Promise<Compil
   }`;
 
   const input = {
-    language: "Solidity",
-    sources: { "Token.sol": { content: source } },
+    language: 'Solidity',
+    sources: { 'Token.sol': { content: source } },
     settings: {
       optimizer: { enabled: true, runs: 200 },
-      outputSelection: { "*": { "*": ["abi", "evm.bytecode"] } },
+      outputSelection: { '*': { '*': ['abi', 'evm.bytecode'] } },
     },
   } as const;
 
   const compiled = JSON.parse(solc.compile(JSON.stringify(input)));
-  const errors = (compiled.errors || []).filter((e: any) => e.severity === "error");
+  const errors = (compiled.errors || []).filter((e: any) => e.severity === 'error');
   if (errors.length) {
     throw new Error(
-      "Solc compile failed: " + errors.map((e: any) => e.formattedMessage || e.message).join("\n")
+      'Solc compile failed: ' + errors.map((e: any) => e.formattedMessage || e.message).join('\n'),
     );
   }
-  const artifact = compiled.contracts["Token.sol"]["TestToken"];
+  const artifact = compiled.contracts['Token.sol']['TestToken'];
   const abi = artifact.abi as any[];
-  const bytecode = "0x" + artifact.evm.bytecode.object;
+  const bytecode = '0x' + artifact.evm.bytecode.object;
   return { abi, bytecode };
 }
-
-

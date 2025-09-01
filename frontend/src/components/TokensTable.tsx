@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useBalances, useWalletAddress } from "@/hooks/useBackend";
-import { useNetwork } from "@/context/NetworkContext";
+import Link from 'next/link';
+import { useBalances, useWalletAddress } from '@/hooks/useBackend';
+import { useNetwork } from '@/context/NetworkContext';
 
 export function TokensTable() {
   const { selected } = useNetwork();
@@ -25,15 +25,29 @@ export function TokensTable() {
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td className="p-3 pl-4" colSpan={3}>Loading…</td></tr>
+                <tr>
+                  <td className="p-3 pl-4" colSpan={3}>
+                    Loading…
+                  </td>
+                </tr>
               )}
               {!isLoading && filtered.length === 0 && (
-                <tr><td className="p-3 pl-4" colSpan={3}>No tokens</td></tr>
+                <tr>
+                  <td className="p-3 pl-4" colSpan={3}>
+                    No tokens
+                  </td>
+                </tr>
               )}
               {filtered.map((b) => (
-                <tr key={`${b.network}-${b.symbol}`} className="border-b border-[var(--border)] hover:bg-[var(--muted)]">
+                <tr
+                  key={`${b.network}-${b.symbol}`}
+                  className="border-b border-[var(--border)] hover:bg-[var(--muted)]"
+                >
                   <td className="p-3 pl-4">
-                    <Link href={`/token/${encodeURIComponent(b.symbol)}?network=${encodeURIComponent(b.network)}`} className="underline">
+                    <Link
+                      href={`/token/${encodeURIComponent(b.symbol)}?network=${encodeURIComponent(b.network)}`}
+                      className="underline"
+                    >
                       {b.name}
                     </Link>
                   </td>
@@ -48,5 +62,3 @@ export function TokensTable() {
     </div>
   );
 }
-
-

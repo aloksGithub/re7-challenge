@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { fetchNetworks } from "@/lib/api";
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchNetworks } from '@/lib/api';
 
 type NetworkContextValue = {
   networks: string[];
@@ -15,13 +15,13 @@ const NetworkContext = createContext<NetworkContextValue | undefined>(undefined)
 
 export function useNetwork() {
   const ctx = useContext(NetworkContext);
-  if (!ctx) throw new Error("useNetwork must be used within NetworkProvider");
+  if (!ctx) throw new Error('useNetwork must be used within NetworkProvider');
   return ctx;
 }
 
 export function NetworkProvider({ children }: { children: React.ReactNode }) {
   const { data, isLoading } = useQuery({
-    queryKey: ["networks"],
+    queryKey: ['networks'],
     queryFn: fetchNetworks,
   });
 
@@ -33,16 +33,15 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
     }
   }, [data, isLoading, selected]);
 
-  const value = useMemo<NetworkContextValue>(() => ({
-    networks: data ?? [],
-    selected,
-    setSelected,
-    isLoading,
-  }), [data, isLoading, selected]);
-
-  return (
-    <NetworkContext.Provider value={value}>{children}</NetworkContext.Provider>
+  const value = useMemo<NetworkContextValue>(
+    () => ({
+      networks: data ?? [],
+      selected,
+      setSelected,
+      isLoading,
+    }),
+    [data, isLoading, selected],
   );
+
+  return <NetworkContext.Provider value={value}>{children}</NetworkContext.Provider>;
 }
-
-

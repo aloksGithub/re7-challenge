@@ -1,13 +1,13 @@
-import { Contract, Wallet, formatUnits, parseUnits } from "ethers";
-import { getProvider, getSupportedNetworks } from "../config/networks.js";
-import { getSupportedToken, getSupportedTokensForNetwork } from "./dbService.js";
+import { Contract, Wallet, formatUnits, parseUnits } from 'ethers';
+import { getProvider, getSupportedNetworks } from '../config/networks.js';
+import { getSupportedToken, getSupportedTokensForNetwork } from './dbService.js';
 
 const ERC20_ABI = [
-  "function transfer(address to, uint256 value) public returns (bool)",
-  "function decimals() view returns (uint8)",
-  "function symbol() view returns (string)",
-  "function name() view returns (string)",
-  "function balanceOf(address owner) view returns (uint256)",
+  'function transfer(address to, uint256 value) public returns (bool)',
+  'function decimals() view returns (uint8)',
+  'function symbol() view returns (string)',
+  'function name() view returns (string)',
+  'function balanceOf(address owner) view returns (uint256)',
 ];
 
 export type TransferParams = {
@@ -27,7 +27,7 @@ function getWalletFromEnv(network: string) {
   }
   const signer = (provider as any)?.getSigner?.();
   if (!signer) {
-    throw new Error("PRIVATE_KEY is required to sign transactions");
+    throw new Error('PRIVATE_KEY is required to sign transactions');
   }
   return signer as any;
 }
@@ -35,7 +35,7 @@ function getWalletFromEnv(network: string) {
 export function getAddressFromEnv() {
   const pk = process.env.PRIVATE_KEY;
   if (!pk) {
-    throw new Error("PRIVATE_KEY is required to get address");
+    throw new Error('PRIVATE_KEY is required to get address');
   }
   const signer = new Wallet(pk);
   return signer.address;
@@ -46,7 +46,7 @@ export async function transferErc20(params: TransferParams) {
   const signer = getWalletFromEnv(network);
   const contract = new Contract(tokenAddress, ERC20_ABI, signer);
 
-  const tokenDecimals = typeof decimals === "number" ? decimals : await contract.decimals();
+  const tokenDecimals = typeof decimals === 'number' ? decimals : await contract.decimals();
   const value = parseUnits(amount, tokenDecimals);
 
   const tx = await contract.transfer(to, value);
@@ -61,36 +61,40 @@ export async function getBalance(user: string, tokenAddress: string, network: st
   const contract = new Contract(tokenAddress, ERC20_ABI, provider);
   const balance = await contract.balanceOf(user);
   const token = await getSupportedToken(network, tokenAddress);
-  const decimals = token?.decimals || await contract.decimals();
-  return {balance: formatUnits(balance, decimals), decimals};
+  const decimals = token?.decimals || (await contract.decimals());
+  return { balance: formatUnits(balance, decimals), decimals };
 }
 
 export async function getNetworkBalances(user: string, network: string) {
   const tokens = await getSupportedTokensForNetwork(network);
-  const balances = await Promise.all(tokens.map(async (token) => {
-    const {balance, decimals} = await getBalance(user, token.tokenAddress, network);
-    return {
-      network,
-      symbol: token.symbol,
-      name: token.name,
-      balance,
-      decimals
-    };
-  }));
+  const balances = await Promise.all(
+    tokens.map(async (token) => {
+      const { balance, decimals } = await getBalance(user, token.tokenAddress, network);
+      return {
+        network,
+        symbol: token.symbol,
+        name: token.name,
+        balance,
+        decimals,
+      };
+    }),
+  );
   return balances;
 }
 
 export async function getBalances(user: string) {
   const networks = getSupportedNetworks();
-  const balances = (await Promise.all(networks.map(async (network) => {
-    const balances = await getNetworkBalances(user, network);
-    return balances;
-  }))).flat();
+  const balances = (
+    await Promise.all(
+      networks.map(async (network) => {
+        const balances = await getNetworkBalances(user, network);
+        return balances;
+      }),
+    )
+  ).flat();
   return balances;
 }
 
 export default {
   transferErc20,
 };
-
-

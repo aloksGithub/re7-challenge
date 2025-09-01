@@ -1,4 +1,4 @@
-import { NextFunction, Request, RequestHandler, Response } from "express";
+import { NextFunction, Request, RequestHandler, Response } from 'express';
 
 export class HttpError extends Error {
   status: number;
@@ -26,17 +26,15 @@ export function notFound(req: Request, _res: Response, next: NextFunction) {
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
   const isHttp = err instanceof HttpError;
   const status = isHttp ? err.status : 500;
-  const message = isHttp ? err.message : "Internal Server Error";
+  const message = isHttp ? err.message : 'Internal Server Error';
   const code = isHttp ? err.code : undefined;
   const details = isHttp ? err.details : undefined;
 
   const payload: Record<string, unknown> = { message };
   if (code) payload.code = code;
 
-  console.error(err)
-  console.error(`Error details:`, details)
+  console.error(err);
+  console.error(`Error details:`, details);
 
   res.status(status).json({ error: payload });
 }
-
-

@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { Header } from "@/components/Header";
-import { TokensTable } from "@/components/TokensTable";
+import { Header } from '@/components/Header';
+import { TokensTable } from '@/components/TokensTable';
 
 export default function Home() {
   return (

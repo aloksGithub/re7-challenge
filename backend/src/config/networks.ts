@@ -1,6 +1,6 @@
-import { AbstractProvider, JsonRpcProvider } from "ethers";
+import { AbstractProvider, JsonRpcProvider } from 'ethers';
 
-export type NetworkName = "ethereum" | "sepolia" | "matic" | "localhost";
+export type NetworkName = 'ethereum' | 'sepolia' | 'matic' | 'localhost';
 
 type NetworkConfig = {
   chainId: number;
@@ -12,10 +12,10 @@ function makeProvider(rpcUrl: string | undefined, fallbackUrl: string): Abstract
   return new JsonRpcProvider(url);
 }
 
-const DEFAULT_MAINNET = "https://ethereum.publicnode.com";
-const DEFAULT_SEPOLIA = "https://ethereum-sepolia.publicnode.com";
-const DEFAULT_POLYGON = "https://polygon-rpc.com";
-const DEFAULT_LOCALHOST = "http://127.0.0.1:8545";
+const DEFAULT_MAINNET = 'https://ethereum.publicnode.com';
+const DEFAULT_SEPOLIA = 'https://ethereum-sepolia.publicnode.com';
+const DEFAULT_POLYGON = 'https://polygon-rpc.com';
+const DEFAULT_LOCALHOST = 'http://127.0.0.1:8545';
 
 const ethereumProvider = makeProvider(process.env.MAINNET_RPC_URL, DEFAULT_MAINNET);
 const sepoliaProvider = makeProvider(process.env.SEPOLIA_RPC_URL, DEFAULT_SEPOLIA);
@@ -31,11 +31,13 @@ export const NETWORKS: Record<NetworkName, NetworkConfig> = {
 
 const isProd = () => {
   const stage = process.env.NODE_ENV;
-  return stage === "prod" || stage === "production";
-}
+  return stage === 'prod' || stage === 'production';
+};
 
 export function getSupportedNetworks(): NetworkName[] {
-  return isProd() ? ["ethereum", "sepolia", "matic"] : ["ethereum", "sepolia", "matic", "localhost"];
+  return isProd()
+    ? ['ethereum', 'sepolia', 'matic']
+    : ['ethereum', 'sepolia', 'matic', 'localhost'];
 }
 
 export function getNetworkConfig(name: string): NetworkConfig | undefined {
@@ -50,5 +52,3 @@ export function getProvider(name: string): AbstractProvider {
   }
   return cfg.provider;
 }
-
-

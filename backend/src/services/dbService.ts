@@ -1,4 +1,4 @@
-import prisma from "../db.js";
+import prisma from '../db.js';
 
 type AddTransactionInput = {
   fromAddress: string;
@@ -13,9 +13,7 @@ function normalizeAddress(address: string): string {
   return address.toLowerCase();
 }
 
-export async function addTransaction(
-  input: AddTransactionInput,
-) {
+export async function addTransaction(input: AddTransactionInput) {
   const transaction = await prisma.transaction.create({
     data: {
       fromAddress: normalizeAddress(input.fromAddress),
@@ -58,10 +56,7 @@ type SupportedTokenInput = {
   enabled?: boolean;
 };
 
-export async function addSupportedTokensForNetwork(
-  network: string,
-  tokens: SupportedTokenInput[],
-) {
+export async function addSupportedTokensForNetwork(network: string, tokens: SupportedTokenInput[]) {
   let created = 0;
   let skipped = 0;
   for (const t of tokens) {
@@ -91,7 +86,9 @@ export async function addSupportedTokensForNetwork(
 
 export async function removeSupportedToken(network: string, tokenAddress: string) {
   const tokenAddr = normalizeAddress(tokenAddress);
-  const result = await prisma.supportedToken.deleteMany({ where: { network, tokenAddress: tokenAddr } });
+  const result = await prisma.supportedToken.deleteMany({
+    where: { network, tokenAddress: tokenAddr },
+  });
   return result.count;
 }
 
@@ -100,13 +97,11 @@ type GetTransactionsFilters = {
   to?: string;
   network?: string;
   tokenAddress?: string;
-  order?: "asc" | "desc";
+  order?: 'asc' | 'desc';
 };
 
-export async function getTransactions(
-  filters: GetTransactionsFilters = {},
-) {
-  const order = (filters.order ?? "desc") === "asc" ? ("asc" as const) : ("desc" as const);
+export async function getTransactions(filters: GetTransactionsFilters = {}) {
+  const order = (filters.order ?? 'desc') === 'asc' ? ('asc' as const) : ('desc' as const);
 
   return prisma.transaction.findMany({
     where: {
@@ -119,17 +114,15 @@ export async function getTransactions(
   });
 }
 
-export async function getSupportedTokensForNetwork(
-  network: string,
-) {
+export async function getSupportedTokensForNetwork(network: string) {
   return prisma.supportedToken.findMany({
     where: { network, enabled: true },
-    orderBy: [{ symbol: "asc" }, { name: "asc" }],
+    orderBy: [{ symbol: 'asc' }, { name: 'asc' }],
   });
 }
 
 export async function getSupportedToken(network: string, tokenAddress: string) {
   return prisma.supportedToken.findUnique({
-    where: {network_tokenAddress: {network, tokenAddress}}
+    where: { network_tokenAddress: { network, tokenAddress } },
   });
 }

@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --background: #ffffff;
@@ -32,11 +32,29 @@
 }
 
 body {
-  background: radial-gradient(1200px circle at 10% -10%, color-mix(in hsl, var(--accent), transparent 90%), transparent 60%),
-              radial-gradient(1000px circle at 110% -10%, color-mix(in hsl, var(--accent), transparent 92%), transparent 60%),
-              var(--background);
+  background:
+    radial-gradient(
+      1200px circle at 10% -10%,
+      color-mix(in hsl, var(--accent), transparent 90%),
+      transparent 60%
+    ),
+    radial-gradient(
+      1000px circle at 110% -10%,
+      color-mix(in hsl, var(--accent), transparent 92%),
+      transparent 60%
+    ),
+    var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, Arial, sans-serif;
+  font-family:
+    var(--font-geist-sans),
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    Inter,
+    Arial,
+    sans-serif;
   min-height: 100dvh;
 }
 
