@@ -17,7 +17,7 @@ function Tabs({ active, onChange }: { active: TabId; onChange: (t: TabId) => voi
       ] as const).map((t) => (
         <button
           key={t.id}
-          className={`px-3 py-2 -mb-[1px] ${active === t.id ? "border-b-2 border-[var(--accent)] text-[var(--foreground)]" : "text-gray-500 hover:text-[var(--foreground)]"}`}
+          className={`px-3 py-2 -mb-[1px] hover:cursor-pointer ${active === t.id ? "border-b-2 border-[var(--accent)] text-[var(--foreground)]" : "text-gray-500 hover:text-[var(--foreground)]"}`}
           onClick={() => onChange(t.id)}
         >
           {t.label}
@@ -129,7 +129,7 @@ function TransferForm({ tokenAddress }: { tokenAddress: string }) {
         {errors.amount && <span className="text-xs text-red-600 mt-1">{errors.amount}</span>}
       </div>
       <div className="flex items-center gap-2">
-        <button type="submit" className="bg-[var(--accent)] text-white px-4 py-2 rounded shadow hover:opacity-90 transition" disabled={transfer.isPending}>
+        <button type="submit" className="bg-[var(--accent)] text-white px-4 py-2 rounded shadow hover:opacity-90 transition hover:cursor-pointer" disabled={transfer.isPending}>
           {transfer.isPending ? "Transferring…" : "Transfer"}
         </button>
       </div>
@@ -194,8 +194,6 @@ function History({ tokenAddress }: { tokenAddress: string }) {
   };
   return (
     <div>
-      {isLoading && <div>Loading…</div>}
-      {!isLoading && (txs?.length ?? 0) === 0 && <div>No transactions</div>}
       <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
         <div className="max-h-96 overflow-auto">
           <table className="w-full border-collapse text-sm">
