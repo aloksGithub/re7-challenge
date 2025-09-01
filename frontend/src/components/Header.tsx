@@ -16,11 +16,19 @@ export function Header() {
 
   const [copied, setCopied] = useState(false);
   return (
-    <div className="w-full flex items-center justify-between py-4">
+    <div
+      className={`
+        w-full flex items-center justify-between
+        py-4
+      `}
+    >
       <div className="flex items-center gap-2">
         <label className="text-sm text-gray-500">Network</label>
         <select
-          className="border border-[var(--border)] bg-[var(--surface)] rounded px-2 py-1"
+          className={`
+            border border-[var(--border)] bg-[var(--surface)] rounded
+            px-2 py-1
+          `}
           value={selected ?? ''}
           onChange={(e) => setSelected(e.target.value)}
           disabled={isLoading}
@@ -32,12 +40,21 @@ export function Header() {
           ))}
         </select>
       </div>
-      <div className="text-sm font-mono px-2 py-1 rounded bg-[var(--surface)] border border-[var(--border)] flex items-center gap-2">
+      <div
+        className={`
+          text-sm font-mono flex items-center gap-2
+          rounded bg-[var(--surface)] border border-[var(--border)]
+          px-2 py-1
+        `}
+      >
         {loadingWallet ? '…' : truncateMiddle(wallet ?? '')}
         {!loadingWallet && wallet && (
           <button
             type="button"
-            className="p-1 rounded hover:bg-[var(--muted)] cursor-pointer"
+            className={`
+              rounded cursor-pointer hover:bg-[var(--muted)]
+              p-1
+            `}
             aria-label="Copy wallet address"
             title={copied ? 'Copied' : 'Copy'}
             onClick={async () => {

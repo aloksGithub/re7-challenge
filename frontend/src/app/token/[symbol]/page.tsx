@@ -24,7 +24,12 @@ function Tabs({ active, onChange }: { active: TabId; onChange: (t: TabId) => voi
       ).map((t) => (
         <button
           key={t.id}
-          className={`px-3 py-2 -mb-[1px] hover:cursor-pointer ${active === t.id ? 'border-b-2 border-[var(--accent)] text-[var(--foreground)]' : 'text-gray-500 hover:text-[var(--foreground)]'}`}
+          className={`
+            px-3 py-2 -mb-[1px] hover:cursor-pointer
+            ${active === t.id
+              ? 'border-b-2 border-[var(--accent)] text-[var(--foreground)]'
+              : 'text-gray-500 hover:text-[var(--foreground)]'}
+          `}
           onClick={() => onChange(t.id)}
         >
           {t.label}
@@ -141,7 +146,10 @@ function TransferForm({ tokenAddress }: { tokenAddress: string }) {
         <div className="flex flex-col">
           <label className="text-sm">To</label>
           <input
-            className={`border ${errors.to ? 'border-red-500' : 'border-[var(--border)]'} bg-[var(--surface)] rounded px-2 py-2`}
+            className={`
+              border ${errors.to ? 'border-red-500' : 'border-[var(--border)]'}
+              bg-[var(--surface)] rounded px-2 py-2
+            `}
             value={to}
             onChange={(e) => setTo(e.target.value)}
             placeholder="0x..."
@@ -151,7 +159,10 @@ function TransferForm({ tokenAddress }: { tokenAddress: string }) {
         <div className="flex flex-col">
           <label className="text-sm">Amount</label>
           <input
-            className={`border ${errors.amount ? 'border-red-500' : 'border-[var(--border)]'} bg-[var(--surface)] rounded px-2 py-2`}
+            className={`
+              border ${errors.amount ? 'border-red-500' : 'border-[var(--border)]'}
+              bg-[var(--surface)] rounded px-2 py-2
+            `}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="1.5"
@@ -161,7 +172,10 @@ function TransferForm({ tokenAddress }: { tokenAddress: string }) {
         <div className="flex items-center gap-2">
           <button
             type="submit"
-            className="bg-[var(--accent)] text-white px-4 py-2 rounded shadow hover:opacity-90 transition hover:cursor-pointer"
+            className={`
+              bg-[var(--accent)] text-white rounded shadow transition hover:opacity-90 hover:cursor-pointer
+              px-4 py-2
+            `}
             disabled={transfer.isPending}
           >
             {transfer.isPending ? 'Transferring…' : 'Transfer'}
@@ -170,14 +184,24 @@ function TransferForm({ tokenAddress }: { tokenAddress: string }) {
       </form>
       {modalMounted && (
         <div
-          className={`fixed inset-0 z-50 flex items-center justify-center ${modal.visible ? '' : 'pointer-events-none'}`}
+          className={`
+            fixed inset-0 z-50 flex items-center justify-center
+            ${modal.visible ? '' : 'pointer-events-none'}
+          `}
         >
           <div
-            className={`absolute inset-0 bg-black/40 transition-opacity duration-200 ease-out ${modal.visible ? 'opacity-100' : 'opacity-0'}`}
+            className={`
+              absolute inset-0 bg-black/40 transition-opacity duration-200 ease-out
+              ${modal.visible ? 'opacity-100' : 'opacity-0'}
+            `}
             onClick={() => setModal((m) => ({ ...m, visible: false }))}
           />
           <div
-            className={`relative z-10 w-full max-w-sm rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 text-center shadow-lg transition-all duration-200 ease-out ${modal.visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}`}
+            className={`
+              relative z-10 w-full max-w-sm rounded-lg border border-[var(--border)] bg-[var(--surface)]
+              p-6 text-center shadow-lg transition-all duration-200 ease-out
+              ${modal.visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}
+            `}
           >
             {modal.type === 'success' ? (
               <svg
@@ -223,7 +247,10 @@ function TransferForm({ tokenAddress }: { tokenAddress: string }) {
             <div className="mt-6 flex justify-center">
               <button
                 type="button"
-                className="bg-[var(--accent)] text-white px-4 py-2 rounded hover:opacity-90 transition"
+                className={`
+                  bg-[var(--accent)] text-white rounded transition hover:opacity-90
+                  px-4 py-2
+                `}
                 onClick={() => setModal((m) => ({ ...m, visible: false }))}
               >
                 Close
@@ -392,11 +419,21 @@ export default function TokenPage() {
     );
 
   return (
-    <div className="min-h-screen p-6 max-w-5xl mx-auto pb-16">
+    <div
+      className={`
+        min-h-screen max-w-5xl mx-auto
+        p-6 pb-16
+      `}
+    >
       <div className="mb-4">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 bg-[var(--surface)] border border-[var(--border)] px-3 py-1.5 rounded hover:bg-[var(--muted)] transition text-[var(--foreground)] no-underline"
+          className={`
+            inline-flex items-center gap-2 transition text-[var(--foreground)] no-underline
+            bg-[var(--surface)] border border-[var(--border)]
+            px-3 py-1.5
+            rounded hover:bg-[var(--muted)]
+          `}
         >
           <span>←</span>
           <span>Back</span>
